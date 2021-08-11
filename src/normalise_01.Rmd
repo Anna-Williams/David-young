@@ -195,13 +195,18 @@ plotPCA(sce, colour_by= "chip", point_size=0.1) +
   ggtitle("After normalisation, small dots")
 ```
 
-Another type of dimensional reduction is the UMAP reduction.
+Another type of dimensional reduction are the non linear UMAP and TSNE reductions.
 <!-- This is better -->
 <!-- to assess how integrated the data is.  -->
 ```{r umap}
 sce <- runUMAP(sce,  dimred="PCA")
 plotReducedDim(sce, colour_by= "chip", point_size=0.1, dimred = "UMAP") + 
       ggtitle("UMAP dimensional reduction")
+```
+```{r tsne}
+sce <- runTSNE(sce,  dimred="PCA")
+plotReducedDim(sce, colour_by= "chip", point_size=0.1, dimred = "TSNE") + 
+      ggtitle("TSNE dimensional reduction")
 ```
 
 <!-- # Batch correction with linear method -->
