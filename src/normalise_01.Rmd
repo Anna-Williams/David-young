@@ -209,75 +209,99 @@ plotReducedDim(sce, colour_by= "chip", point_size=0.1, dimred = "TSNE") +
       ggtitle("TSNE dimensional reduction")
 ```
 
-<!-- # Batch correction with linear method -->
+```{r mnn}
+project <- "mnn"
+```
 
-<!-- Combat, a linear method for batch correction, was shown to outperform other -->
-<!-- batch correction methods for simple batch -->
-<!-- correction (Buttner et. al, 2019).  -->
-<!-- <!-- The function rescaleBataches() is roughly --> -->
-<!-- <!-- equivalent to applying a linear regression to the log-expression values per --> -->
-<!-- <!-- gene, with some adjustments to improve performance and efficiency, keeping the --> -->
-<!-- <!-- sparcity of the matrice.  --> -->
-<!-- regressBatches is a linear correction implemented in the Bioconductor batchelor -->
-<!-- package.  -->
-<!-- <!-- regressBatches does have the advantage of indicating wich parametres to NOT regress, but it needs a design matrix, last time I tried to build one I ran out of space, because it does not preserve the saprcity of the matrix, and as a dense matrix is very big.  --> -->
+# Batch correction with MNN
 
-<!-- ```{r batch-correct} -->
-<!-- if (!(file.exists( -->
-<!--   here("processed", project,  "sce_corrected.RDS") -->
-<!-- ))) { -->
-<!-- set.seed(100) -->
-<!-- sce <- correctExperiments(sce, -->
-<!--   batch = factor(sce$chip), -->
-<!--   PARAM = RegressParam() -->
-<!--   ) -->
-<!--   saveRDS(sce, here("processed", project,  "sce_corrected.RDS")) -->
-<!-- } else { -->
-<!--    sce <- readRDS(here("processed", project,  "sce_corrected.RDS")) -->
-<!-- } -->
-<!-- ``` -->
+Combat was shown to outperform other batch correction methods for simple batch
+correction (Buttner et. al, 2019). However, this will also regress other 
+biological differences that are not well balanced between batches. Integration 
+techniques account for this fact, with the downside that it can lead to
+over-correction due to increased degrees of freedom of these non-linear methods. 
 
-<!-- ### Assess Confunding factors impact -->
+We use a merge tree, useful for merging together batches that are known to be 
+more closely related before attempting difficult merges involving more dissimilar
+batches.
+```{r batch-correct}
+if (!(file.exists(
+  here("processed", project,  "sce_corrected.RDS")
+))) {
+set.seed(100)
+sce <- correctExperiments(sce,
+  batch = factor(sce$chip),
+  PARAM = FastMnnParam(
+  merge.order = 
+    list(list("3","5"), list("4","6"))
+    
+  )
+)
+  saveRDS(sce, here("processed", project,  "sce_corrected.RDS"))
+} else {
+   sce <- readRDS(here("processed", project,  "sce_corrected.RDS"))
+}
+```
 
-<!-- I have never seen this plot used after batch correction and I am not 100% sure it -->
-<!-- is correct. -->
+### Assess Confunding factors impact
 
-<!-- ```{r} -->
-<!-- # Only compute if first time -->
-<!-- if (!(file.exists(here("processed", project,  "variance_explained_corrected.RDS")))) { -->
-<!--   # Log transfrom the corrected values -->
-<!--   assay(sce, "log_corrected") <- matLog2(assay(sce, "corrected")) -->
-<!--   # Calculate the matrix (time consuming step) -->
-<!--   var_corrected <- getVarianceExplained( -->
-<!--     sce, -->
-<!--     exprs_values = "log_corrected", -->
-<!--     variables = c( -->
-<!--       "chip", -->
-<!--       "genotype", -->
-<!--       "mouse", -->
-<!--       "subsets_mt_percent", -->
-<!--       "detected", -->
-<!--       "total" -->
-<!--     ) -->
-<!--   ) -->
-<!--   saveRDS(var_corrected, here("processed", project,  "variance_explained_corrected.RDS")) -->
-<!--   #If not just load created object -->
-<!-- } else{ -->
-<!--   var_corrected <- readRDS(here("processed", project,  "variance_explained_corrected.RDS")) -->
-<!-- } -->
-<!-- plotExplanatoryVariables(var_corrected) -->
-<!-- ``` -->
+I have never seen this plot used after batch correction and I am not 100% sure (
+and I hope) it is incorrect. 
+```{r}
+# Only compute if first time
+if (!(file.exists(here("processed", project,  "variance_explained_corrected.RDS")))) {
+  # Log transfrom the corrected values
+  assay(sce, "log_reconstructed") <- matLog2(assay(sce, "reconstructed"))
+  # Calculate the matrix (time consuming step)
+  var_corrected <- getVarianceExplained(
+    sce,
+    exprs_values = "log_reconstructed",
+    variables = c(
+      "tissue",
+      "chip",
+      "age",
+      "genotype",
+      "mouse",
+      "total"
+    )
+  )
+  saveRDS(var_corrected, here("processed", project,  "variance_explained_corrected.RDS"))
+  #If not just load created object
+} else{
+  var_corrected <- readRDS(here("processed", project,  "variance_explained_corrected.RDS"))
+}
+plotExplanatoryVariables(var_corrected)
+```
 
-<!-- <!-- todo: add if statments here, save the dim red in the corrected_sce --> -->
-<!-- ```{r pca-corrected} -->
-<!-- sce <- runPCA(sce, name="PCA_corrected", exprs_values="corrected") -->
-<!-- sce <- runUMAP(sce, name="UMAP_corrected", dimred="PCA_corrected") -->
-<!-- plotReducedDim(sce, colour_by= "chip", point_size=0.1, dimred = "UMAP_corrected") +  -->
-<!--       ggtitle("After batch correction, small dots") -->
-<!-- ``` -->
 
-<!-- It looks almost worst than before batch correction, we will keep this without any -->
-<!-- kind of batch correction. -->
+
+```{r}
+plotReducedDim(sce, colour_by= "chip", point_size=0.1, dimred = "corrected") + 
+      ggtitle("After batch correction, small dots")
+```
+```{r tsne}
+sce <- runTSNE(sce,  dimred="corrected")
+plotReducedDim(sce, colour_by= "chip", point_size=0.1, dimred = "TSNE") + 
+      ggtitle("TSNE dimensional reduction corrected")
+```
+
+One useful diagnostic is the proportion of variance within each batch that is 
+lost during MNN correction. Specifically, this refers to the within-batch variance 
+that is removed during orthogonalization with respect to the average correction 
+vector at each merge step. This is in the metadata, which contains a matrix of 
+the variance lost in each batch (column) at each merge step (row).
+
+Large proportions of lost variance (>10%) suggest that correction is removing
+genuine biological heterogeneity. This would occur due to violations of the 
+assumption of orthogonality between the batch effect and the biological subspace.
+In this case, the proportion of lost variance is small, indicating that 
+non-orthogonality is not a major concern.
+
+```{r}
+metadata(sce)$merge.info$lost.var
+```
+
+
 
 ## Session Info
 
