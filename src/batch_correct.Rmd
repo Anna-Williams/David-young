@@ -70,6 +70,10 @@ We use a merge tree, useful for merging together batches that are known to be
 more closely related (same tissue) before attempting difficult merges involving more dissimilar
 batches.
 
+```{r import}
+sce <- readRDS(here("processed", project,  "sce_dimred_01.RDS"))
+```
+
 ```{r batch-correct}
 if (!(file.exists(
   here("processed", project,  "sce_corrected.RDS")
@@ -77,10 +81,12 @@ if (!(file.exists(
 set.seed(100)
 sce <- correctExperiments(sce,
   batch = factor(sce$chip),
+  subset.row = rowSubset(sce),
+  correct.all=TRUE,
   PARAM = FastMnnParam(
   merge.order = 
-    list(list("3","5"), list("4","6"))
-    
+    list(list("3","5"), list("4","6")),
+  d = 25
   )
 )
   saveRDS(sce, here("processed", project,  "sce_corrected.RDS"))
@@ -94,7 +100,7 @@ sce <- correctExperiments(sce,
 This plot is not meant to be used with the new gene values, as these are just a reconstruction
 that should only be used for visual purpose. I was still curious to see how it would look like. 
 
-```{r}
+```{r , eval=F}
 # Only compute if first time
 if (!(file.exists(here("processed", project,  "variance_explained_corrected.RDS")))) {
   # Log transfrom the corrected values
@@ -127,6 +133,11 @@ plotReducedDim(sce, colour_by= "chip", point_size=0.1, dimred = "corrected") +
       ggtitle("After batch correction, small dots")
 ```
 ```{r tsne}
+#keep the previous dimensional reduction just in case
+reducedDim(sce, "TSNE_uncorrected") <- reducedDim(sce, "TSNE")
+# plot uit
+plotReducedDim(sce, colour_by= "chip", point_size=0.1, dimred = "TSNE_uncorrected") + 
+      ggtitle("TSNE dimensional reduction before correction")
 sce <- runTSNE(sce,  dimred="corrected")
 plotReducedDim(sce, colour_by= "chip", point_size=0.1, dimred = "TSNE") + 
       ggtitle("TSNE dimensional reduction corrected")
@@ -148,6 +159,11 @@ non-orthogonality is not a major concern.
 metadata(sce)$merge.info$lost.var
 ```
 
+```{r}
+if (!(file.exists(
+  here("processed", project,  "sce_corrected.RDS")
+))) {  saveRDS(sce, here("processed", project,  "sce_corrected.RDS"))}
+```
 
 
 ## Session Info
