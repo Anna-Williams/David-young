@@ -71,13 +71,14 @@ more closely related (same tissue) before attempting difficult merges involving 
 batches.
 
 ```{r import}
-sce <- readRDS(here("processed", project,  "sce_dimred_01.RDS"))
+
 ```
 
 ```{r batch-correct}
 if (!(file.exists(
   here("processed", project,  "sce_corrected.RDS")
 ))) {
+sce <- readRDS(here("processed", project,  "sce_dimred_01.RDS"))
 set.seed(100)
 sce <- correctExperiments(sce,
   batch = factor(sce$chip),
@@ -89,7 +90,6 @@ sce <- correctExperiments(sce,
   d = 25
   )
 )
-  saveRDS(sce, here("processed", project,  "sce_corrected.RDS"))
 } else {
    sce <- readRDS(here("processed", project,  "sce_corrected.RDS"))
 }
@@ -133,12 +133,17 @@ plotReducedDim(sce, colour_by= "chip", point_size=0.1, dimred = "corrected") +
       ggtitle("After batch correction, small dots")
 ```
 ```{r tsne}
+if (!(file.exists(
+  here("processed", project,  "sce_corrected.RDS")
+))) {
 #keep the previous dimensional reduction just in case
 reducedDim(sce, "TSNE_uncorrected") <- reducedDim(sce, "TSNE")
+set.seed(100)
+sce <- runTSNE(sce,  dimred="corrected")
+}
 # plot uit
 plotReducedDim(sce, colour_by= "chip", point_size=0.1, dimred = "TSNE_uncorrected") + 
       ggtitle("TSNE dimensional reduction before correction")
-sce <- runTSNE(sce,  dimred="corrected")
 plotReducedDim(sce, colour_by= "chip", point_size=0.1, dimred = "TSNE") + 
       ggtitle("TSNE dimensional reduction corrected")
 ```
