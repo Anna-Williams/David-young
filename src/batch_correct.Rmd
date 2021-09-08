@@ -87,7 +87,8 @@ sce <- correctExperiments(sce,
   PARAM = FastMnnParam(
   merge.order = 
     list(list("3","5"), list("4","6")),
-  d = 25
+  d = 25,
+  prop.k=0.05
   )
 )
 } else {
