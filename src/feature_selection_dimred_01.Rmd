@@ -23,7 +23,7 @@ library(here) #reproducible paths
 ```
 
 ```{r}
-project <- "mnn"
+project <- "fire-mice"
 ```
 
 ```{r load-sce}

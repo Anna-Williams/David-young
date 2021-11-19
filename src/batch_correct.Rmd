@@ -55,7 +55,7 @@ matLog2 <- function(spmat, scale = FALSE, scaleFactor = 1e6) {
 ```
 
 ```{r project}
-project <- "mnn"
+project <- "fire-mice"
 ```
 
 # Batch correction with MNN

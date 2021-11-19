@@ -22,7 +22,7 @@ library(clustree) # show relationship clustering
 ```
 
 ```{r}
-age <- "mnn"
+age <- "fire-mice"
 ```
 
 ```{r load-sce}

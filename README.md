@@ -1,3 +1,7 @@
 # David-young
 
-This is the final branch so far, however, some processed objects are only in the "main" one ( for the first steps)
+This includes: 
+normalisation
+feature selection and dim reduction
+batch correction using dimensional reduction and feature selection 
+clustering
