@@ -22,7 +22,6 @@ library(scater) # For qc and visualisation
 library(scran) # For normalisation
 library(Matrix) # For log transorming the raw data
 library(ggplot2) # To add titles to plots
-library(batchelor) # Batch correction
 ```
 
 ```{r matlog2}
@@ -209,75 +208,6 @@ plotReducedDim(sce, colour_by= "chip", point_size=0.1, dimred = "TSNE") +
       ggtitle("TSNE dimensional reduction")
 ```
 
-<!-- # Batch correction with linear method -->
-
-<!-- Combat, a linear method for batch correction, was shown to outperform other -->
-<!-- batch correction methods for simple batch -->
-<!-- correction (Buttner et. al, 2019).  -->
-<!-- <!-- The function rescaleBataches() is roughly --> -->
-<!-- <!-- equivalent to applying a linear regression to the log-expression values per --> -->
-<!-- <!-- gene, with some adjustments to improve performance and efficiency, keeping the --> -->
-<!-- <!-- sparcity of the matrice.  --> -->
-<!-- regressBatches is a linear correction implemented in the Bioconductor batchelor -->
-<!-- package.  -->
-<!-- <!-- regressBatches does have the advantage of indicating wich parametres to NOT regress, but it needs a design matrix, last time I tried to build one I ran out of space, because it does not preserve the saprcity of the matrix, and as a dense matrix is very big.  --> -->
-
-<!-- ```{r batch-correct} -->
-<!-- if (!(file.exists( -->
-<!--   here("processed", project,  "sce_corrected.RDS") -->
-<!-- ))) { -->
-<!-- set.seed(100) -->
-<!-- sce <- correctExperiments(sce, -->
-<!--   batch = factor(sce$chip), -->
-<!--   PARAM = RegressParam() -->
-<!--   ) -->
-<!--   saveRDS(sce, here("processed", project,  "sce_corrected.RDS")) -->
-<!-- } else { -->
-<!--    sce <- readRDS(here("processed", project,  "sce_corrected.RDS")) -->
-<!-- } -->
-<!-- ``` -->
-
-<!-- ### Assess Confunding factors impact -->
-
-<!-- I have never seen this plot used after batch correction and I am not 100% sure it -->
-<!-- is correct. -->
-
-<!-- ```{r} -->
-<!-- # Only compute if first time -->
-<!-- if (!(file.exists(here("processed", project,  "variance_explained_corrected.RDS")))) { -->
-<!--   # Log transfrom the corrected values -->
-<!--   assay(sce, "log_corrected") <- matLog2(assay(sce, "corrected")) -->
-<!--   # Calculate the matrix (time consuming step) -->
-<!--   var_corrected <- getVarianceExplained( -->
-<!--     sce, -->
-<!--     exprs_values = "log_corrected", -->
-<!--     variables = c( -->
-<!--       "chip", -->
-<!--       "genotype", -->
-<!--       "mouse", -->
-<!--       "subsets_mt_percent", -->
-<!--       "detected", -->
-<!--       "total" -->
-<!--     ) -->
-<!--   ) -->
-<!--   saveRDS(var_corrected, here("processed", project,  "variance_explained_corrected.RDS")) -->
-<!--   #If not just load created object -->
-<!-- } else{ -->
-<!--   var_corrected <- readRDS(here("processed", project,  "variance_explained_corrected.RDS")) -->
-<!-- } -->
-<!-- plotExplanatoryVariables(var_corrected) -->
-<!-- ``` -->
-
-<!-- <!-- todo: add if statments here, save the dim red in the corrected_sce --> -->
-<!-- ```{r pca-corrected} -->
-<!-- sce <- runPCA(sce, name="PCA_corrected", exprs_values="corrected") -->
-<!-- sce <- runUMAP(sce, name="UMAP_corrected", dimred="PCA_corrected") -->
-<!-- plotReducedDim(sce, colour_by= "chip", point_size=0.1, dimred = "UMAP_corrected") +  -->
-<!--       ggtitle("After batch correction, small dots") -->
-<!-- ``` -->
-
-<!-- It looks almost worst than before batch correction, we will keep this without any -->
-<!-- kind of batch correction. -->
 
 ## Session Info
 
