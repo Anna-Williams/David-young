@@ -50,7 +50,7 @@ if (!file.exists(here("processed", age, "clusters_SNN_k5-k60_01.RDS"))) {
   #  and save in a list with an appropriate name for later use
   clusters_list <-
     mapply(function(cluster_name, k) {
-      clusterRows(reducedDim(sce, "PCA"), NNGraphParam(k = k))
+      clusterRows(reducedDim(sce, "corrected"), NNGraphParam(k = k))
     },
     names,
     ks,
