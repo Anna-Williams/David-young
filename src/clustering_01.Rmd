@@ -19,6 +19,8 @@ library(here) #reproducible paths
 library(scater) # Plot dimred
 library(bluster) # Clustering 
 library(clustree) # show relationship clustering
+library(Seurat) # clusternig 2
+library(pals) # for palettes with large n #kelly()22, #polychrome()#36, unname(alphabet())
 ```
 
 ```{r}
@@ -33,11 +35,47 @@ sce <- readRDS(here("processed", age, "sce_corrected.RDS"))
 }
 ```
 
-### Motivation
+```{r functions, echo=FALSE}
+# plot all the seurat dim reduction
+plot_list_func <- function(seur_obj,
+                           col_pattern="RNA_snn_res.", 
+                           plot_cols, 
+                           clust_lab = TRUE,
+                           label_size = 8,
+                           num_col = 4,
+                           reduction = "umap",
+                           # todo add a save FALSE
+                           save_dir = getwd(),
+                           width=7,
+                           height=5){
+  extr_res_col <- grep(pattern = col_pattern, names(seur_obj@meta.data))
+  res_names <- names(seur_obj@meta.data[extr_res_col])
+  # gtools function, sorts gene_names alphanumeric:
+  res_names <- gtools::mixedsort(res_names) 
+  plot_l <-list()
+  for(i in 1: length(res_names)){
+  #pdf(paste0(save_dir, 
+    #           res_names[i], "_umap.pdf"), width=width, height=height)
+  dim_plot <- DimPlot(seur_obj, 
+                          reduction = reduction, 
+                          cols= plot_cols,
+                          group.by = res_names[i],
+                          label = clust_lab,
+                          label.size = label_size) + NoLegend()
+  print(dim_plot)
+ # dev.off()
+ # print(dim_plot)
+  }
+}
+
+```
+
+## Motivation
 
 Clustering is an unsupervised learning procedure that is used in scRNA-seq data analysis to empirically define groups of cells with similar expression profiles. It is worth stressing the distinction between clusters and cell types. The former is an empirical construct while the latter is a biological truth (albeit a vaguely defined one). For this reason, questions like “what is the true number of clusters?” are usually meaningless. We can define as many clusters as we like, with whatever algorithm we like - each clustering will represent its own partitioning of the high-dimensional expression space, and is as “real” as any other clustering.
 It is helpful to realize that clustering, like a microscope, is simply a tool to explore the data. We can zoom in and out by changing the resolution of the clustering parameters, and we can experiment with different clustering algorithms to obtain alternative perspectives of the data.
 
+## With Bioconductor
 
 ```{r cluster}
 # choose the resolutions to compute
@@ -72,6 +110,7 @@ if(!file.exists((here("processed", age, "sce_clusters_01.RDS")))){
     k <- ks[i]
     cluster_name <- names[i]
     colData(sce) <- cbind(colData(sce), clusters_list[cluster_name])
+    # and plot the result
     plotDim <-
       plotReducedDim(
         sce,
@@ -111,5 +150,45 @@ if(!file.exists((here("processed", age, "sce_clusters_01.RDS")))){
 We use this visualisation to see the relationships between the clusters. The aim is to capture the redistribution of cells from one clustering to another at progressively higher resolutions, providing a convenient depiction of how clusters merge or split apart. 
 ```{r fig.height=14, fig.width=14}
 clustree(sce, prefix = "cluster_k", edge_arrow = FALSE)
+```
+
+## With Seurat
+
+```{r eval=FALSE, include=FALSE}
+srt <- as.Seurat(sce)
+srt <- FindNeighbors(srt, reduction = "corrected", dims = 1:25)
+srt <- FindClusters(srt, 
+                    resolution = c(0.01, 0.04, 0.05, 
+                                 seq(from = 0.1, to = 1, by = 0.1))
+                   )
+srt_cluster_names <- grep("originalexp_snn_res", names(srt@meta.data), value = TRUE)
+srt_clusters_metadata <- srt[[srt_cluster_names]]
+
+saveRDS(srt_clusters_metadata, here("processed", age, "srt_clusters.RDS"))
+
+plot_list_func(srt, 
+               col_pattern="originalexp_snn_res", 
+               plot_cols = c( unname(polychrome()), unname(watlington())),
+               reduction = "TSNE", 
+               label_size = 4 
+               )
+
+DimPlot(srt, reduction = "TSNE", group.by = "originalexp_snn_res.1", label = TRUE)
+
+
+
+```
+
+```{r fig.height=14, fig.width=14}
+clustree(srt_clusters_metadata, prefix = "originalexp_snn_res.", edge_arrow = FALSE)
+```
+## save all clusterings in the same object
+```{r}
+# check the cell names are the same
+identical(row.names(colData(sce)), row.names(srt_clusters_metadata))
+
+# add them
+colData(sce) <- cbind(colData(sce), srt_clusters_metadata)
+
 ```
 
