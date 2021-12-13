@@ -36,27 +36,27 @@ sce <- readRDS(here("processed", age, "sce_corrected.RDS"))
 ```
 
 ```{r functions, echo=FALSE}
-# plot all the seurat dim reduction
-plot_list_func <- function(seur_obj,
+# plot all the seurat or sce dim reduction
+plot_list_func <- function(obj,
                            col_pattern="RNA_snn_res.", 
                            plot_cols, 
                            clust_lab = TRUE,
-                           label_size = 8,
+                           label_size = 1,
                            num_col = 4,
                            reduction = "umap",
                            # todo add a save FALSE
                            save_dir = getwd(),
                            width=7,
                            height=5){
+if(class(obj)[1] == "Seurat"){
   extr_res_col <- grep(pattern = col_pattern, names(seur_obj@meta.data))
   res_names <- names(seur_obj@meta.data[extr_res_col])
   # gtools function, sorts gene_names alphanumeric:
   res_names <- gtools::mixedsort(res_names) 
-  plot_l <-list()
   for(i in 1: length(res_names)){
   #pdf(paste0(save_dir, 
     #           res_names[i], "_umap.pdf"), width=width, height=height)
-  dim_plot <- DimPlot(seur_obj, 
+  dim_plot <- DimPlot(obj, 
                           reduction = reduction, 
                           cols= plot_cols,
                           group.by = res_names[i],
@@ -66,6 +66,32 @@ plot_list_func <- function(seur_obj,
  # dev.off()
  # print(dim_plot)
   }
+}else if (class(obj)[1] == "SingleCellExperiment"){
+  names <- grep(pattern = col_pattern, names(colData(sce)), value = TRUE)
+  ks <- stringr::str_remove(string = names, pattern = col_pattern)
+  # gtools function, sorts gene_names alphanumeric:
+  names <- gtools::mixedsort(names) 
+  # plot directly from the sce_clusters_01.RDS
+  idx <- c(1:length(names))
+  for (i in idx) {
+    k <- ks[i]
+    cluster_name <- names[i]
+    plotDim <-
+      plotReducedDim(
+        obj,
+        dimred = reduction,
+        colour_by = cluster_name,
+        point_size = label_size,
+        point_alpha = 0.3,
+        text_by = cluster_name,
+        text_size = 3
+      )  + scale_color_hue() + ggtitle(paste("Clustering with resolution/k =", k))
+    print(plotDim)
+  }
+}else{
+  stop("object must be seurat or singlecellexperiment")
+}
+  
 }
 
 ```
