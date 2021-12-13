@@ -94,7 +94,7 @@ if (!file.exists(here("processed", age, "clusters_SNN_k5-k60_01.RDS"))) {
     ks,
     USE.NAMES = TRUE,
     SIMPLIFY = FALSE)
-  saveRDS(cluster_list,
+  saveRDS(clusters_list,
           here("processed", age, "clusters_SNN_k5-k60_01.RDS"))
 } else{
   clusters_list <-
