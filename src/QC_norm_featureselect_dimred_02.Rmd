@@ -1,0 +1,189 @@
+---
+title: "Reanalise after QC"
+author: "Nadine Bestard"
+date: "17/01/2022"
+output:
+  html_document:
+    code_folding: hide
+---
+
+
+# Set-up
+```{r output-code, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r set-up, message=FALSE, warning=FALSE}
+library(here) # for reproducible paths
+library(SingleCellExperiment)
+library(scater) # For qcs
+library(scran) # for normalisation, feature selection
+library(ggplot2) # To add titles to plots
+library(batchelor) # Batch correction
+```
+
+```{r load-sce}
+
+project <- "fire-mice"
+sce <- readRDS(here("processed", project, "sce_clusterQC.RDS"))
+
+```
+
+The object has `r dim(sce)[1]` genes and `r dim(sce)[2]` cells.
+
+# Cell QC
+Previous thresholds were:
+detected genes: 429 - 7111 
+sum umi: 462 - 19024
+mt: 14.37%
+
+These thresholds and will not be modified.
+
+<details>
+
+<summary> Click to expand plots </summary>
+```{r}
+plotColData(sce, x = "Sample", y = "subsets_mt_percent") +
+  scale_y_log10() + ggtitle("Total count log scale") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+plotColData(sce, x = "Sample", y = "detected") +
+  scale_y_log10() + ggtitle("Total count log scale") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+plotColData(sce, x = "Sample", y = "sum") +
+  scale_y_log10() + ggtitle("Total count log scale") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+hist(
+  sce$detected,
+  breaks = 100
+)
+hist(
+  sce$sum,
+  breaks = 100
+)
+hist(
+  sce$subsets_mt_percent,
+  breaks = 100
+)
+```
+</details>
+
+
+# Gene QC
+
+In the preliminary analysis we only deleted genes that had less than 2 cells expressing it, now 
+we filter all genes with less than 10 cells expressing it
+```{r}
+# at least 10 cells should express the gene
+keep_feature <- rowSums(counts(sce) > 0) > 10
+sce <- sce[keep_feature,]
+```
+
+
+# Normalisation
+
+```{r eval=FALSE}
+## Normalise by deconvolution ---
+if(!file.exists(here("processed", project,  "sce_norm_02.RDS"))){
+# For reproducibility
+set.seed(100)
+# Quick clustering to pool samples together and deal with 0 counts
+quick_clusters <- quickCluster(sce)
+# Calculate size factors
+sce <-
+  computeSumFactors(sce, cluster = quick_clusters, min.mean = 0.1)
+# Check that there are not negative size factors
+summary(sizeFactors(sce))
+# Apply size factors and log transform them
+sce <- logNormCounts(sce)
+# save object
+saveRDS(sce, here("processed", project,  "sce_norm_02.RDS"))
+}
+```
+
+# Feature selection
+
+After the quality control the variable genes need to be selected again to better represent the variance in this cleaned dataset.
+We follow the same methods than for our first feature selection, selecting here for 
+the top 2000 genes.
+
+```{r}
+gene_var_df <- modelGeneVar(sce)
+gene_var <- metadata(gene_var_df)
+plot(gene_var$mean, gene_var$var, xlab= "Mean of log-expression", ylab= "Variance of log-expression")
+curve(gene_var$trend(x), lwd=2, add=T, col = "red")
+# select hvgs
+hvgs <- getTopHVGs(gene_var_df, n=2000)
+# save them in the object
+rowSubset(sce) <- hvgs
+```
+# Dimensionality reduction
+
+## Run PCA and choose PCs
+```{r}
+if(!file.exists(here("processed", project,  "sce_dimred_02.RDS"))){
+set.seed(1000)
+sce <- runPCA(sce)
+
+pct_var <- attr(reducedDim(sce, "PCA"), "percentVar")
+plot(pct_var, log="y", xlab="PC", ylab="pct variance explained")
+
+
+
+ #will keep 26PCs 
+
+#keep the previous dimensional reduction just in case
+reducedDim(sce, "PCA_all") <- reducedDim(sce, "PCA")
+# And replace the default PCA with the reduced PCs
+reducedDim(sce, "PCA") <- reducedDim(sce, "PCA")[,1:26]
+}
+```
+
+## Visualisation
+For visualisation, reduce to 2 dimensions. Non linear reductions.
+
+### UMAP and TSNE
+```{r}
+if(!file.exists(here("processed", project,  "sce_dimred_02.RDS"))){
+sce <- runUMAP(sce, dimred="PCA")
+plotReducedDim(sce, dimred="UMAP", colour_by="genotype", point_size=0.1, point_alpha = 0.3)
+sce <- runTSNE(sce, dimred="PCA")
+plotReducedDim(sce, dimred="TSNE", colour_by="genotype", point_size=0.1, point_alpha = 0.3)
+plotReducedDim(sce, dimred="TSNE", colour_by="chip", point_size=0.1, point_alpha = 0.3)
+
+saveRDS(sce, here("processed", project, "sce_dimred_02.RDS"))
+
+}else{ # load teh corrected object
+  sce <- readRDS(here("processed", project,  "sce_corrected_02.RDS"))
+  plotReducedDim(sce, "TSNE_uncorrected", colour_by="chip")
+}
+```
+
+## Rerrun barch correction
+```{r batch, message=FALSE, warning=FALSE}
+if (!(file.exists(
+  here("processed", project,  "sce_corrected_02.RDS")
+))) {
+set.seed(100)
+sce <- correctExperiments(sce,
+  batch = factor(sce$chip),
+  subset.row = rowSubset(sce),
+  correct.all=TRUE,
+  PARAM = FastMnnParam(
+  merge.order = 
+    list(list("3","5"), list("4","6")),
+  d = 23,
+  prop.k=0.10
+  )
+)
+# recompute dimensional reduction 
+#keeping  the previous dimensional reduction
+reducedDim(sce, "TSNE_uncorrected") <- reducedDim(sce, "TSNE")
+set.seed(100)
+sce <- runTSNE(sce,  dimred="corrected")
+# save
+saveRDS( sce, here("processed", project,  "sce_corrected_02.RDS"))
+}
+plotReducedDim(sce, colour_by= "chip", dimred = "TSNE") + 
+      ggtitle("TSNE dimensional reduction corrected")
+```
+
