@@ -149,7 +149,8 @@ if(!file.exists((here("processed", project, "sce_clusters_01.RDS")))){
       )  + scale_color_hue() + ggtitle(paste("Clustering with k =", k))
     print(plotDim)
   }
-  saveRDS(sce, here("processed", project, "sce_clusters_01.RDS"))
+  # removed from here, just save after all clustering methods
+#  saveRDS(sce, here("processed", project, "sce_clusters_01.RDS"))
   
 } else{
   # plot directly from the sce_clusters_01.RDS
@@ -160,7 +161,6 @@ if(!file.exists((here("processed", project, "sce_clusters_01.RDS")))){
                  reduction="TSNE",
                  
   )
-    print(plotDim)
   
 }
 ```
@@ -208,6 +208,7 @@ clustree(srt_clusters_metadata, prefix = "originalexp_snn_res.", edge_arrow = FA
 ```
 ### save all clusterings in the same object
 ```{r}
+if (!file.exists( here("processed", project, "sce_clusters_01.RDS"))) {
 # check the cell names are the same
 identical(row.names(colData(sce)), row.names(srt_clusters_metadata))
 
@@ -216,9 +217,10 @@ colData(sce) <- cbind(colData(sce), srt_clusters_metadata)
 
 ## save
 saveRDS(sce, here("processed", project, "sce_clusters_01.RDS"))
+}
 ```
 
-```{r}
+```{r plot-seurat}
 #plot seurat clustering
 plot_list_func(sce, 
                col_pattern="originalexp_snn_res", 
