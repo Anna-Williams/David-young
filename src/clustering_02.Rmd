@@ -140,6 +140,8 @@ if(!file.exists((here("processed", project, "sce_clusters_02.RDS")))){
   for (i in idx) {
     k <- ks[i]
     cluster_name <- names[i]
+    # remove previous versions of this clustering 
+    colData(sce)[[cluster_name]] <- NULL
     colData(sce) <- cbind(colData(sce), clusters_list[cluster_name])
     # and plot the result
     plotDim <-
@@ -236,4 +238,7 @@ plot_list_func(sce,
                )
 ```
 
+## TODO:
+things that I do not trust:
+- the seurat plot does not have the same clusters in the tree and plots
 - the sce was plotted duplicated and with the previous notation. *This is corrected now. *
