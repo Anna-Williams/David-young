@@ -184,6 +184,11 @@ clustree(sce, prefix = "cluster_k", edge_arrow = FALSE)
 #only run if first time
 if (!file.exists( here("processed", project, "srt_clusters_02.RDS"))) {
 srt <- as.Seurat(sce)
+# delete old clustering
+srt_cluster_names <- grep("originalexp_snn_res", names(srt@meta.data), value = TRUE)
+for(cluster in srt_cluster_names){
+  srt[[cluster]]<-NULL
+}
 srt <- FindNeighbors(srt, reduction = "corrected", dims = 1:23)
 srt <- FindClusters(srt, 
                     resolution = c(0.01, 0.04, 0.05, 
@@ -223,6 +228,15 @@ identical(row.names(colData(sce)), row.names(srt_clusters_metadata))
 # add them
 colData(sce) <- cbind(colData(sce), srt_clusters_metadata)
 
+# add rough annotation
+sce_anno <- readRDS(here("processed/fire-mice/sce_corrected_02.RDS"))
+celltype <- colData(sce_anno)["celltype"]
+sce_anno <- readRDS(here("processed/fire-mice/sce_clusterQC.RDS"))
+celltype <- colData(sce_anno)["celltype"]
+identical(row.names(colData(sce)), row.names(celltype))
+sce$celltype <- celltype$celltype
+
+
 ## save
 saveRDS(sce, here("processed", project, "sce_clusters_02.RDS"))
 }
@@ -238,7 +252,7 @@ plot_list_func(sce,
                )
 ```
 
-## TODO:
-things that I do not trust:
-- the seurat plot does not have the same clusters in the tree and plots
-- the sce was plotted duplicated and with the previous notation. *This is corrected now. *
+
+
+
+
