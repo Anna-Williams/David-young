@@ -1,0 +1,529 @@
+---
+title: "Annotation cluster res 0.3"
+author: "NadineBestard"
+date: "30/03/2021"
+output:
+  html_document:
+    code_folding: hide
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries, message=FALSE, warning=FALSE}
+library(here) #reproducible paths
+library(scater) #feature plots
+library(patchwork) # agregate plots
+library(scran) # for findmarkers
+library(pals) # for palettes with large n #kelly()22, #polychrome()#36, cols
+library(tidyverse) # edit 
+```
+
+```{r project}
+project <- "fire-mice"
+```
+```{r colours}
+cols25 <- unname(cols25())
+# remove the black and white from the pallete, and the similars to cols25
+# assessed with pal.bands and pal.cube
+kelly_col <- unname(kelly()[-c(1,2,5,6)])
+# remove the colours that are similar to the 
+cols25 <- 
+cols <- c(kelly_col, cols25)
+```
+
+```{r import}
+if (!file.exists(here("processed", project, "sce_anno_02.RDS"))) {
+  sce <- readRDS(here("processed", project, "sce_clusters_02.RDS"))
+}else{
+  sce <- readRDS(here("processed", project, "sce_anno_02.RDS"))
+}
+```
+
+## Annotation
+
+First annotation with known markers
+
+
+```{r}
+plotTSNE(sce, colour_by = "originalexp_snn_res.0.3", text_by = "originalexp_snn_res.0.3", force = 0) + scale_color_manual(values = cols)
+```
+
+<details>
+
+<summary> Click to expand the Neurons marker plots </summary>
+
+```{r 4-feature-plots, cache=TRUE}
+#Neurons:
+list_plots <- lapply(c("Snap25", "Stmn2", "Rbfox3", "Gabrb2"),
+                     function(x)plotTSNE(sce, colour_by = x ))
+
+wrap_plots(list_plots) +  plot_annotation(title = "Neurons")
+```
+
+```{r violin-neuro, fig.height=4}
+plotExpression(sce, features=c("Snap25", "Stmn2", "Rbfox3", "Gabrb2") ,
+    x="originalexp_snn_res.0.3", colour_by = "originalexp_snn_res.0.3", ncol=1) +  scale_color_manual(values = cols)
+```
+
+```{r 4-feature-plots-default, cache=TRUE}
+#Inhibitory neurons
+
+list_plots <- lapply(c("Gad1", "Gad2", "Slc32a1", "Pvalb"),
+                     function(x)plotTSNE(sce, colour_by = x ))
+wrap_plots(list_plots) +  plot_annotation(title =  "Inhibitory Neurons")
+```
+
+```{r violin-neuroin, fig.height=4, cache=TRUE}
+plotExpression(sce, features=c("Gad1", "Gad2", "Slc32a1", "Pvalb"),
+    x="originalexp_snn_res.0.3", colour_by = "originalexp_snn_res.0.3", ncol=1) +  scale_color_manual(values = cols)
+```
+
+```{r one-line, fig.height=3, fig.width=9, cache=TRUE}
+# Excitatory neurons
+
+list_plots <- lapply(c("Satb2", "Slc12a6", "Slc17a7"),
+                     function(x)plotTSNE(sce, colour_by = x )) 
+wrap_plots(list_plots) +  plot_annotation(title =  "Exitatory Neurons")
+```
+
+```{r violin-neuroex, fig.height=3, cache=TRUE}
+plotExpression(sce, features=c("Satb2", "Slc12a6", "Slc17a7"),
+    x="originalexp_snn_res.0.3", colour_by = "originalexp_snn_res.0.3", ncol=1) +  scale_color_manual(values = cols)
+```
+
+```{r 4-plots, cache=TRUE}
+# RBFOX3 (and other Granulate cell markers)
+list_plots <- lapply(c("Cdh15", "Calb2", "Rbfox3", "Reln"),
+function(x)plotTSNE(sce, colour_by = x )) 
+wrap_plots(list_plots) +  plot_annotation(title =  "RBFO3+ Neurons")
+```
+
+```{r violin-neurorbfox, fig.height=4, cache=TRUE}
+plotExpression(sce, features=c("Cdh15", "Calb2", "Rbfox3", "Reln"),
+    x="originalexp_snn_res.0.3", colour_by = "originalexp_snn_res.0.3", ncol=1) +  scale_color_manual(values = cols)
+```
+
+</details>
+
+<details>
+
+<summary> Click to expand the Stromal marker plots </summary>
+
+```{r small-feature-plots2, cache=TRUE}
+#Stromal
+
+list_plots <- lapply(c( "Lamb1" , 
+                                     "Hspg2", 
+                                     "Col4a1", 
+                                     "Fn1", 
+                                     "Lama2"),
+            function(x) plotTSNE(sce, colour_by = x ))
+
+wrap_plots(list_plots) +  plot_annotation(title =  "Stromal")
+```
+
+```{r violin-stromal, fig.height=5, cache=TRUE}
+plotExpression(sce, features=c( "Lamb1" , 
+                                     "Hspg2", 
+                                     "Col4a1", 
+                                     "Fn1", 
+                                     "Lama2"),
+    x="originalexp_snn_res.0.3", colour_by = "originalexp_snn_res.0.3", ncol=1) +  scale_color_manual(values = cols)
+```
+
+```{r 3lines-feature-plots, fig.height=8, cache=TRUE}
+# Endothelial cells and pericytes
+
+list_plots <- lapply(c( "Cldn5",   
+                                     "Icam2",
+                                     "Pdgfrb", 
+                                     "Notch3", 
+                                     "Vwf",
+                                     "Flt1",
+                                     "Mecom"),
+                     function(x)plotTSNE(sce, colour_by = x ))
+wrap_plots(list_plots) +  plot_annotation(title =  " Endothelial cells and pericytes")
+```
+
+```{r violin-endo, fig.height=7, cache=TRUE}
+plotExpression(sce, features=c( "Cldn5",   
+                                     "Icam2",
+                                     "Pdgfrb", 
+                                     "Notch3", 
+                                     "Vwf",
+                                     "Flt1",
+                                     "Mecom"),
+    x="originalexp_snn_res.0.3", colour_by = "originalexp_snn_res.0.3", ncol=1) +  scale_color_manual(values = cols)
+```
+
+</details>
+
+<details>
+
+<summary>Click to expand the Epithelial cells </summary>
+
+```{r one-line-3-col, fig.height=3, fig.width=9, cache=TRUE}
+list_plots <- lapply(c("Ttr", "Kcnj13", "Krt18"),
+                     function(x)plotTSNE(sce, colour_by = x ))
+wrap_plots(list_plots) +  plot_annotation(title =  "Choroid plexus epithelial cells")
+```
+
+```{r violin-epi, fig.height=3, cache=TRUE}
+plotExpression(sce, features=c("Ttr", "Kcnj13", "Krt18"),
+    x="originalexp_snn_res.0.3", colour_by = "originalexp_snn_res.0.3", ncol=1) +  scale_color_manual(values = cols)
+```
+
+</details>
+
+<details>
+
+<summary> Click to expand the Astrocytes marker plots </summary>
+
+```{r 3lines-4-col-feature-plots, fig.height=7, fig.width=9, cache=TRUE}
+# Astrocytes
+
+list_plots <- lapply(c("Gja1",
+                                    "Aqp4", 
+                                    "Glul", 
+                                    "Sox9", 
+                                    "Ndrg2", 
+                                    "Gfap", 
+                                    "Aldh1a1", 
+                                    "Aldh1l1", 
+                                    "Vim", 
+                                    "Apoe", 
+                                    "Fgfr3"),
+                     function(x)plotTSNE(sce, colour_by = x ))
+wrap_plots(list_plots) +  plot_annotation(title = "Astrocyte")
+```
+
+```{r violin-astro, fig.height=11, cache=TRUE}
+plotExpression(sce, features=c("Gja1",
+                                    "Aqp4", 
+                                    "Glul", 
+                                    "Sox9", 
+                                    "Ndrg2", 
+                                    "Gfap", 
+                                    "Aldh1a1", 
+                                    "Aldh1l1", 
+                                    "Vim", 
+                                    "Apoe", 
+                                    "Fgfr3"),
+    x="originalexp_snn_res.0.3", colour_by = "originalexp_snn_res.0.3", ncol=1) +  scale_color_manual(values = cols)
+```
+
+```{r 3lines-feature-plots-2, cache=TRUE, fig.height=9, fig.width=9}
+#Astrocyte markers as described in Zeisel et al. 2018 in the mouse for telencephalon and non-telencephalon astrocytes
+
+list_plots <- lapply(c( "Agt", 
+                                     "Mfge8",  
+                                     "Slc6a11",
+                                     "Slc6a9", 
+                                     "Gdf10",
+                                     "Islr",
+                                     "Gfap",
+                                     "Aqp4")  ,
+                     function(x)plotTSNE(sce, colour_by = x ))
+wrap_plots(list_plots) +  plot_annotation(title = "Astrocyte mouse telecephalon")
+```
+
+</details>
+
+<details>
+
+<summary> Click to expand the Immune cells plots </summary>
+
+```{r 3lines-feature-plots3, cache=TRUE, fig.height=8}
+#Microglia and macrophages
+
+list_plots <- lapply(c( "Cd74", 
+                                     "Spi1", 
+                                     "Mrc1", 
+                                     "Tmem119", 
+                                     "Cx3cr1", 
+                                     "Aif1",
+                                     "P2ry12",
+                                     "C1qc",
+                                     "C1qa"),
+            function(x)plotTSNE(sce, colour_by = x )) 
+wrap_plots(list_plots) +  plot_annotation(title = "Microglia and macrophages")
+```
+
+```{r violin-micro, fig.height=9, cache=TRUE}
+plotExpression(sce, features=c( "Cd74", 
+                                     "Spi1", 
+                                     "Mrc1", 
+                                     "Tmem119", 
+                                     "Cx3cr1", 
+                                     "Aif1",
+                                     "P2ry12",
+                                     "C1qc",
+                                     "C1qa"),
+    x="originalexp_snn_res.0.3", colour_by = "originalexp_snn_res.0.3", ncol=1) +  scale_color_manual(values = cols)
+```
+
+```{r  3-in-one-line, fig.height=4, cache=TRUE}
+# Border associated mcrophages
+list_plots <- lapply(c( "Mrc1", "Ms4a7", "Apoe"),
+            function(x)plotTSNE(sce, colour_by = x )) 
+wrap_plots(list_plots) +  plot_annotation(title = "Border associated macrophages")
+```
+
+```{r violin-bam, fig.height=3, cache=TRUE}
+plotExpression(sce, features=c( "Mrc1", "Ms4a7", "Apoe"),
+    x="originalexp_snn_res.0.3", colour_by = "originalexp_snn_res.0.3", ncol=1) +  scale_color_manual(values = cols)
+```
+
+```{r  two-lines, fig.height=8, cache=TRUE}
+# Immune cells 
+list_plots <- lapply(c( 
+  # Tcells
+  "Cd3e", 
+  # Bcells
+  "Cd19", 
+  # Natural killer
+  "Klrb1c", "Cd209a", 
+  # all immune cells (CD45)
+  "Ptprc"),
+            function(x)plotTSNE(sce, 
+                                colour_by = x ,
+                                point_alpha=0.3,
+                                point_size = 0.5)) 
+wrap_plots(list_plots) +  plot_annotation(title = "Immune cells")
+```
+
+```{r violin-immuno, fig.height=5, cache=TRUE}
+plotExpression(sce, features=c( 
+  # Tcells
+  "Cd3e", 
+  # Bcells
+  "Cd19", 
+  # Natural killer
+  "Klrb1c", "Cd209a", 
+  # all immune cells (CD45)
+  "Ptprc"),
+    x="originalexp_snn_res.0.3", colour_by = "originalexp_snn_res.0.3", ncol=1) +  scale_color_manual(values = cols)
+```
+
+```{r fig.height=4}
+#monocybes/neutrophils
+list_plots <- lapply(c( 
+  # monocytes
+  "S100a9",
+  #neutrophils
+  "Ly6g", "Camp"),
+            function(x)plotTSNE(sce, 
+                                colour_by = x ,
+                                point_alpha=0.3,
+                                point_size = 0.5)) 
+wrap_plots(list_plots) +  plot_annotation(title = "Monocytes and Neutorphils cells")
+```
+
+```{r violin-mono, fig.height=3, cache=TRUE}
+plotExpression(sce, features=c( 
+   # monocytes
+  "S100a9",
+  #neutrophils
+  "Ly6g", "Camp"),
+    x="originalexp_snn_res.0.3", colour_by = "originalexp_snn_res.0.3", ncol=1) +  scale_color_manual(values = cols)
+```
+
+</details>
+
+<details>
+
+<summary> Click to expand the Oligodendroglia marker plots </summary>
+
+```{r big-feature-plots4, cache=TRUE, fig.height=8}
+#OPCs
+
+list_plots <- lapply(c("Pdgfra", 
+                                    "Cspg4", 
+                                    "Gpr17", 
+                                    "Ptprz1",
+                                    "Olig1", 
+                                    "Olig2", 
+                                    "Pcdh15", 
+                                    "Ptgds",
+                                    "Bcan"),
+            function(x)plotTSNE(sce, colour_by = x )) 
+wrap_plots(list_plots) +  plot_annotation(title = "OPCS")
+```
+
+```{r violin-opc, fig.height=9, cache=TRUE}
+plotExpression(sce, features=c("Pdgfra", 
+                                    "Cspg4", 
+                                    "Gpr17", 
+                                    "Ptprz1",
+                                    "Olig1", 
+                                    "Olig2", 
+                                    "Pcdh15", 
+                                    "Ptgds",
+                                    "Bcan"),
+    x="originalexp_snn_res.0.3", colour_by = "originalexp_snn_res.0.3", ncol=1) +  scale_color_manual(values = cols)
+```
+
+```{r big-feature-plots5, cache=TRUE, fig.height=8}
+#Oligodendrocytes
+
+list_plots <- lapply(c("Plp1", 
+                                    "Cnp", 
+                                    "Mag", 
+                                    "Mog", 
+                                    "Mobp", 
+                                    "Mbp", 
+                                    "Sox10" ), 
+            function(x)plotTSNE(sce, colour_by = x ))
+wrap_plots(list_plots) +  plot_annotation(title =  "Oligodendrocytes")
+```
+
+```{r violin-oligo, fig.height=7, cache=TRUE}
+plotExpression(sce, features=c("Plp1", 
+                                    "Cnp", 
+                                    "Mag", 
+                                    "Mog", 
+                                    "Mobp", 
+                                    "Mbp", 
+                                    "Sox10" ),
+    x="originalexp_snn_res.0.3", colour_by = "originalexp_snn_res.0.3", ncol=1) +  scale_color_manual(values = cols)
+```
+
+</details>
+
+<details>
+
+<summary> Click to expand the ependymal marker plots </summary>
+
+```{r ependymal, fig.height=8, fig.width=9, cache=TRUE}
+list_plots <- lapply(c("Vit", "Sox9", "Dynlrb2", "Ccdc153", "Rsph1", "Tm4sf1", "Pcp4l1", "Pcp4", "Hspa2", "Cd24a", "Mt2", "Chchd10"), 
+           function(x)plotTSNE(sce, colour_by = x )) 
+wrap_plots(list_plots) +  plot_annotation(title =  "Ependymal")
+
+```
+
+</details>
+
+## Top markers and differential expression
+
+In order to help with the identification of the different clusters we pull out the
+most expressed genes for each cluster.
+
+```{r top_genes}
+if(!file.exists(here("outs", project, "top_genes_res0.3.tsv"))){
+# Create object where instead of cells in cols we have the clusters with counts aggregated
+summed_res0.3 <- aggregateAcrossCells(sce, id=colData(sce)[,c("originalexp_snn_res.0.3")])
+
+# # Delete ribosomal and mitochondrial genes
+# is_ribo <- grepl("^Rp[sl]", rownames(summed_res0.3))
+# is_mito <- grepl("^mt-", rownames(summed_res0.3))
+# keep <- !(is_ribo | is_mito)
+#  summed_res0.3 <- summed_res0.3[keep,]
+ 
+# for each column (aggregated counts) of the object extract the top genes
+top_genes_res0.3 <- apply(counts(summed_res0.3), 
+      MARGIN = 2,
+      function(x){
+        # get the gene names from the top 50 expressed genes
+        names(sort(x, decreasing = T)[1:100])
+        }
+      )
+# save result
+write.table(top_genes_res0.3, file = here("outs", project, "top_genes_res0.3.tsv"), sep = "\t", quote = FALSE, col.names = TRUE, row.names = FALSE)
+}
+```
+
+We compute here a pairwise differential expression between all the clusters. The results are saved in a list of dataframes, "markers_res0.3/markers_res0.3.RDS"
+one for each cluster. A .csv file (that can be opened with a spreadsheet program) for each cluster is available in "markers_res0.3".
+
+The default philosophy of findMarkers() is to identify a combination of marker genes that - together - uniquely define one cluster against the rest. To this end, we collect the top DE genes from each pairwise comparison involving a particular cluster to assemble a set of candidate markers for that cluster. 
+Of particular interest is the `Top` field. The set of genes with `Top` $≤X$ is the union of the top $X$ genes (ranked by p-value) from each pairwise comparison involving the cluster of interest. For example, the set of all genes with `Top` values of 1 contains the gene with the lowest p-value from each comparison. Similarly, the set of genes with `Top` values less than or equal to 10 contains the top 10 genes from each comparison.
+
+```{r markers}
+# compute markers
+if(!file.exists(here("outs", project, "markers_res0.3", "markers_res0.3.RDS"))){
+  dir.create(here("outs", project, "markers_res0.3"))
+  markers <- findMarkers(sce, groups = sce$originalexp_snn_res.0.3, direction="up", lfc=1)
+  saveRDS(markers, here("outs", project,"markers_res0.3", "markers_res0.3.RDS"))
+  # save the top 100 genes for each one of the df
+  lapply(names(markers), function(x){
+    top_markers <- head(markers[[x]], 100)
+    write.csv(top_markers, here("outs", project, "markers_res0.3", paste0("top_markers_", x, "_res0.3.csv")), quote = FALSE)
+    }
+  )
+}
+```
+
+## Rename the Clusters with assigned Cell Types
+
+With the help of the known markers plotted above, the DE between clusters and the top 
+expressed genes the celltype identity of every cluster has been identified. # in progress
+
+
+```{r}
+plotTSNE(sce, colour_by = "originalexp_snn_res.0.3", text_by = "originalexp_snn_res.0.3", force = 0) + scale_color_manual(values = cols)
+```
+
+```{r result}
+if (!file.exists(here("processed", project, "sce_anno_02.RDS"))) {
+annotation <- read.delim(here("data", "young_data_cluster_names_anno_02_res03.tsv"))
+
+celltype <- annotation$Celltype
+clusters_named <- annotation$Cluster_name
+
+sce$celltype <- sce$originalexp_snn_res.0.3 
+sce$clusters_named <- sce$originalexp_snn_res.0.3
+
+# add the celltypes as described above in the correct order to replace the levels.
+levels(sce$celltype) <- celltype
+# and the clusters named to keep the resolution
+levels(sce$clusters_named) <- clusters_named
+
+# relevel to get the appropriate order in the plots
+sce$genotype <- relevel(factor(sce$genotype), "WT")
+# TODO put in the perfect order, for now just alphabetical
+sce$clusters_named <-
+  factor(sce$clusters_named,
+         levels = clusters_named[order(clusters_named)])
+# 
+# sce$celltype <- 
+#   factor(sce$celltype, 
+#          levels = c())
+
+ saveRDS(sce, here("processed", project, "sce_anno_02.RDS"))
+}
+plotTSNE(sce, colour_by = "clusters_named", text_by = "clusters_named", text_size = 3, force = 1) + scale_color_manual(values = cols)
+```
+
+## Marker plots
+
+Exploring the shiny app and the DE between clusters specific markers for each one of the subtypes is identified.
+
+```{r final-violin, fig.height=25, fig.width=9, cache=TRUE}
+annotation <- read.delim(here("data", "young_data_cluster_names_anno_02_res03.tsv"))
+
+annotation <- annotation %>% 
+  arrange(Cluster_name) %>% 
+  unite(col = "markers", c("Celltype_marker","Subcluster_marker"), sep = ",", remove = FALSE, na.rm = TRUE)
+markers <- annotation$markers %>% strsplit(",") %>% unlist() %>% unique()
+plotExpression(sce, features=markers,
+    x="clusters_named", colour_by = "clusters_named", ncol=1, scales = "free_y") +  
+  scale_color_manual(values = cols) + theme(axis.text.x = element_text(angle = 45, hjust=1, vjust = 1)) 
+
+```
+
+## Session Info
+
+<details>
+
+<summary> Click to expand </summary>
+
+```{r session-info}
+sessionInfo()
+```
+
+</details>
