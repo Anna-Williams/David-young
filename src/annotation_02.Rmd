@@ -21,11 +21,13 @@ library(patchwork) # agregate plots
 library(scran) # for findmarkers
 library(pals) # for palettes with large n #kelly()22, #polychrome()#36, cols
 library(tidyverse) # edit 
+library(scDblFinder) # doublets
 ```
 
 ```{r project}
 project <- "fire-mice"
 ```
+
 ```{r colours}
 cols25 <- unname(cols25())
 # remove the black and white from the pallete, and the similars to cols25
@@ -47,7 +49,6 @@ if (!file.exists(here("processed", project, "sce_anno_02.RDS"))) {
 ## Annotation
 
 First annotation with known markers
-
 
 ```{r}
 plotTSNE(sce, colour_by = "originalexp_snn_res.0.3", text_by = "originalexp_snn_res.0.3", force = 0) + scale_color_manual(values = cols)
@@ -410,8 +411,8 @@ wrap_plots(list_plots) +  plot_annotation(title =  "Ependymal")
 
 ## Top markers and differential expression
 
-In order to help with the identification of the different clusters we pull out the
-most expressed genes for each cluster.
+In order to help with the identification of the different clusters we
+pull out the most expressed genes for each cluster.
 
 ```{r top_genes}
 if(!file.exists(here("outs", project, "top_genes_res0.3.tsv"))){
@@ -437,11 +438,23 @@ write.table(top_genes_res0.3, file = here("outs", project, "top_genes_res0.3.tsv
 }
 ```
 
-We compute here a pairwise differential expression between all the clusters. The results are saved in a list of dataframes, "markers_res0.3/markers_res0.3.RDS"
-one for each cluster. A .csv file (that can be opened with a spreadsheet program) for each cluster is available in "markers_res0.3".
+We compute here a pairwise differential expression between all the
+clusters. The results are saved in a list of dataframes,
+"markers_res0.3/markers_res0.3.RDS" one for each cluster. A .csv file
+(that can be opened with a spreadsheet program) for each cluster is
+available in "markers_res0.3".
 
-The default philosophy of findMarkers() is to identify a combination of marker genes that - together - uniquely define one cluster against the rest. To this end, we collect the top DE genes from each pairwise comparison involving a particular cluster to assemble a set of candidate markers for that cluster. 
-Of particular interest is the `Top` field. The set of genes with `Top` $≤X$ is the union of the top $X$ genes (ranked by p-value) from each pairwise comparison involving the cluster of interest. For example, the set of all genes with `Top` values of 1 contains the gene with the lowest p-value from each comparison. Similarly, the set of genes with `Top` values less than or equal to 10 contains the top 10 genes from each comparison.
+The default philosophy of findMarkers() is to identify a combination of
+marker genes that - together - uniquely define one cluster against the
+rest. To this end, we collect the top DE genes from each pairwise
+comparison involving a particular cluster to assemble a set of candidate
+markers for that cluster. Of particular interest is the `Top` field. The
+set of genes with `Top` $≤X$ is the union of the top $X$ genes (ranked
+by p-value) from each pairwise comparison involving the cluster of
+interest. For example, the set of all genes with `Top` values of 1
+contains the gene with the lowest p-value from each comparison.
+Similarly, the set of genes with `Top` values less than or equal to 10
+contains the top 10 genes from each comparison.
 
 ```{r markers}
 # compute markers
@@ -460,9 +473,9 @@ if(!file.exists(here("outs", project, "markers_res0.3", "markers_res0.3.RDS"))){
 
 ## Rename the Clusters with assigned Cell Types
 
-With the help of the known markers plotted above, the DE between clusters and the top 
-expressed genes the celltype identity of every cluster has been identified. # in progress
-
+With the help of the known markers plotted above, the DE between
+clusters and the top expressed genes the celltype identity of every
+cluster has been identified. \# in progress
 
 ```{r}
 plotTSNE(sce, colour_by = "originalexp_snn_res.0.3", text_by = "originalexp_snn_res.0.3", force = 0) + scale_color_manual(values = cols)
@@ -488,31 +501,146 @@ sce$genotype <- relevel(factor(sce$genotype), "WT")
 # TODO put in the perfect order, for now just alphabetical
 sce$clusters_named <-
   factor(sce$clusters_named,
-         levels = clusters_named[order(clusters_named)])
+    levels = c(
+      "Astrocyte_1", "Astrocyte_2", "Oligo-Astrocyte",  "Oligo_1", "Oligo_2", "OPC_1", "OPC-Astrocyte", "OPC-Oligo", "OPC_2", "iOligo", "mNeuron-Oligo", "mNeuron-OPC", "mNeuron_1", "mNeuron_2", "iNeuron&NRP", "Immune", "Microglia", "Oligo-Microglia", "Microglia-Astrocyte", "Microglia-iOligo", "Endothelial", "Mural_cells", "ChP_epithelia", "OEG"
+    )
+  )
+#alphabetical:         levels = clusters_named[order(clusters_named)])
 # 
 # sce$celltype <- 
 #   factor(sce$celltype, 
 #          levels = c())
+
 
  saveRDS(sce, here("processed", project, "sce_anno_02.RDS"))
 }
 plotTSNE(sce, colour_by = "clusters_named", text_by = "clusters_named", text_size = 3, force = 1) + scale_color_manual(values = cols)
 ```
 
-## Marker plots
+## Marker plots - before doublet filtering
 
-Exploring the shiny app and the DE between clusters specific markers for each one of the subtypes is identified.
+Exploring the shiny app and the DE between clusters specific markers for
+each one of the subtypes is identified.
+
+<details>
+
+<summary>
+
+Click to expand markers
+
+</summary>
+
 
 ```{r final-violin, fig.height=25, fig.width=9, cache=TRUE}
 annotation <- read.delim(here("data", "young_data_cluster_names_anno_02_res03.tsv"))
 
-annotation <- annotation %>% 
-  arrange(Cluster_name) %>% 
-  unite(col = "markers", c("Celltype_marker","Subcluster_marker"), sep = ",", remove = FALSE, na.rm = TRUE)
-markers <- annotation$markers %>% strsplit(",") %>% unlist() %>% unique()
-plotExpression(sce, features=markers,
-    x="clusters_named", colour_by = "clusters_named", ncol=1, scales = "free_y") +  
-  scale_color_manual(values = cols) + theme(axis.text.x = element_text(angle = 45, hjust=1, vjust = 1)) 
+annotation$Cluster_name <-
+  factor(annotation$Cluster_name,
+    levels = c(
+      "Astrocyte_1", "Astrocyte_2", "Oligo-Astrocyte", "Oligo_1", "Oligo_2", "OPC_1", "OPC-Astrocyte", "OPC-Oligo", "OPC_2", "iOligo", "mNeuron-Oligo", "mNeuron-OPC", "mNeuron_1", "mNeuron_2", "iNeuron&NRP", "Immune", "Microglia", "Oligo-Microglia", "Microglia-Astrocyte", "Microglia-iOligo", "Endothelial", "Mural_cells", "ChP_epithelia", "OEG"
+    )
+  )
+
+# create list of all markers ( cell level and subcluster level)
+annotation <- annotation %>%
+  arrange(Cluster_name) %>%
+  unite(col = "markers", c("Celltype_marker", "Subcluster_marker"), sep = ",", remove = FALSE, na.rm = TRUE)
+markers <- annotation$markers %>%
+  #divide the comma-separated markers as different markers
+  strsplit(",") %>% unlist() %>%
+  unique()
+
+plotExpression(sce,
+  features = markers,
+  x = "clusters_named", colour_by = "clusters_named", ncol = 1, scales = "free_y"
+) +
+  scale_color_manual(values = cols) + theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+```
+
+</details>
+## Doublet filtering
+
+Some clusters highly express key markers from various combinations of
+two brain cell populations. We therefore rerun doublet finder to assess
+if they are doublets.
+
+We use the scDblFinder tool that consider every possible triplet of
+clusters consisting of a query cluster and two putative "source"
+clusters. Under the null hypothesis that the query consists of doublets
+from the two sources, it computes the number of genes (`num.de`) that
+are differentially expressed in the same direction in the query cluster
+compared to both of the source clusters. Such genes would be unique
+markers for the query cluster and provide evidence against the null
+hypothesis.
+
+-    Clusters with the few unique genes (`num.de`) are more likely to be
+    composed of doublets.The library size ratio is also computed.
+
+-    Potential doublets should also have larger library size than the
+    cells from the source clusters, resulting in `lib.size` ratios
+    bellow unity.
+
+```{r paged.print=TRUE}
+res_dbl <- findDoubletClusters(sce, sce$clusters_named)
+
+(res_dbl <- 
+res_dbl %>% 
+  as.data.frame() %>% 
+  rownames_to_column("cluster"))
+
+# see which clusters are clearly outliers in the number of DE genes.
+res_dbl$cluster[isOutlier(res_dbl$num.de, type = "lower", log = T)]
+```
+
+The most obvious doublets are "mNeuron-OPC", "Microglia-iOligo",
+"mNeuron-Oligo" and "OPC-Oligo" With low `num.de` and both library size
+ratios bellow 1. OPC and Oligo could seem to be a transitionning state, however they do express multiple markers from late Oligo. Microglia + Astrocytes or Oligos do have a library size
+larger than the microglia clusters, but not larger than the astrocyte or
+oligo population. These populations could be microglia prunning bits of
+astrocytes or oligodendrocytes.
+
+We delete the clusters mentioned above.
+
+```{r paged.print=TRUE}
+if (!file.exists(here("processed", project, "sce_anno_nodbl_02.RDS"))) {
+  doublets <- c("mNeuron-OPC", "Microglia-iOligo", "mNeuron-Oligo", "OPC-Oligo", 
+"Microglia-Astrocyte", "Oligo-Microglia")
+  sce <- sce[, !(sce$clusters_named %in% doublets)]
+  sce$clusters_named <- droplevels(sce$clusters_named)
+             
+  
+ saveRDS(sce, here("processed", project, "sce_nodbl_anno_02.RDS"))
+} else {
+  sce <- readRDS(here("processed", project, "sce_nodbl_anno_02.RDS"))
+}
+
+findDoubletClusters(sce, sce$clusters_named) %>% as.data.frame()
+
+```
+```{r final-tsne}
+plotTSNE(sce, colour_by = "clusters_named", text_by = "clusters_named", text_size = 3, force = 1) + scale_color_manual(values = cols)
+```
+
+## Markers
+
+```{r final-violin-nodbl, fig.height=25, fig.width=9, cache=TRUE}
+# dbl
+doublets <- c("mNeuron-OPC", "Microglia-iOligo", "mNeuron-Oligo", "OPC-Oligo", 
+"Microglia-Astrocyte", "Oligo-Microglia")
+# create list of all markers ( cell level and subcluster level)
+annotation <- 
+  annotation %>% subset(!(Cluster_name %in% doublets))
+markers <- annotation$markers %>%
+  #divide the comma-separated markers as different markers
+  strsplit(",") %>% unlist() %>%
+  unique()
+
+plotExpression(sce,
+  features = markers,
+  x = "clusters_named", colour_by = "clusters_named", ncol = 1, scales = "free_y"
+) +
+  scale_color_manual(values = cols) + theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 
 ```
 
