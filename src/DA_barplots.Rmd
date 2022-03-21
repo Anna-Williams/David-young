@@ -52,35 +52,28 @@ ncol = 2
 
 #### Proportion Genotype
 
-In order to visualise the proportions from each genotype there is, we do not
-take in consideration the microglia, as these cells are not present in the KO. We then normalise per number of cells per cluster.
-
-```{r}
-# delete the microglia
-sce_no_mc <- sce[,!(sce$celltype %in% "Microglia")]
-sce_no_mc$clusters_named <- droplevels(sce_no_mc$clusters_named)
-```
+In order to visualise the proportions from each genotype there is we normalise per number of cells per cluster.
 
 
 ```{r}
 # count how many cells from each gnt group  there are per cluster
-sum_per_gnt_cluster_no_mc <- table(sce_no_mc$genotype, sce_no_mc$clusters_named )
+sum_per_gnt_cluster <- table(sce$genotype, sce$clusters_named )
 
 # normalise per cluster, looking how the KO and WT are distributed
 # across the clusters, to give to both groups the same weight
-prop_per_cluster_no_mc <- prop.table(sum_per_gnt_cluster_no_mc, margin = 1)
+prop_per_cluster <- prop.table(sum_per_gnt_cluster, margin = 1)
 
 # calculate the proportions for each cluster
-prop_per_gnt_no_mc <- round(prop.table(prop_per_cluster_no_mc , margin = 2 )*100, 2)
+prop_per_gnt <- round(prop.table(prop_per_cluster , margin = 2 )*100, 2)
 
 # Display
-prop_per_gnt_no_mc<- as.data.frame(prop_per_gnt_no_mc)
-colnames(prop_per_gnt_no_mc) <- c("Genotype", "cluster", "Proportion")
+prop_per_gnt<- as.data.frame(prop_per_gnt)
+colnames(prop_per_gnt) <- c("Genotype", "cluster", "Proportion")
 
-sum_per_gnt_cluster_no_mc<- as.data.frame(sum_per_gnt_cluster_no_mc)
-colnames(sum_per_gnt_cluster_no_mc) <- c("Genotype", "cluster", "Freq")
+sum_per_gnt_cluster<- as.data.frame(sum_per_gnt_cluster)
+colnames(sum_per_gnt_cluster) <- c("Genotype", "cluster", "Freq")
 
-#prop_per_gnt_no_mc %>% 
+#prop_per_gnt %>% 
  # filter(Genotype == "KO") %>% 
  # arrange(desc(Proportion))
 #
@@ -89,14 +82,14 @@ colnames(sum_per_gnt_cluster_no_mc) <- c("Genotype", "cluster", "Freq")
 visualise in a plot
 
 ```{r plot}
-ggplot(data = prop_per_gnt_no_mc, aes(x = cluster, y = Proportion, fill = Genotype)) +
+ggplot(data = prop_per_gnt, aes(x = cluster, y = Proportion, fill = Genotype)) +
   geom_bar(position = "fill", stat = "identity") + theme_classic()+
   scale_fill_manual(values = col_wt_het_ko) +
 theme(axis.text.x = element_text(angle = 45, hjust=1, vjust = 1)) +
   labs( x = element_blank(), 
         y = element_text("Normalised Proportion"))
 
-ggplot(data = sum_per_gnt_cluster_no_mc, aes(x = cluster, y = Freq, fill = Genotype)) +
+ggplot(data = sum_per_gnt_cluster, aes(x = cluster, y = Freq, fill = Genotype)) +
   geom_bar(stat = "identity") + theme_classic()+
   scale_fill_manual(values = col_wt_het_ko) +
 theme(axis.text.x = element_text(angle = 45, hjust=1, vjust = 1)) +
@@ -107,23 +100,23 @@ theme(axis.text.x = element_text(angle = 45, hjust=1, vjust = 1)) +
 
 ```{r}
 # create new variable, with genotype + tissue
-sce_no_mc$gntissue <- paste(sce_no_mc$genotype, sce_no_mc$tissue, sep="-")
-sce_no_mc$gntissue <- factor(sce_no_mc$gntissue, c("WT-cortex","HET-cortex","KO-cortex","WT-hippocampus", "HET-hippocampus",  "KO-hippocampus" ))
+sce$gntissue <- paste(sce$genotype, sce$tissue, sep="-")
+sce$gntissue <- factor(sce$gntissue, c("WT-cortex","HET-cortex","KO-cortex","WT-hippocampus", "HET-hippocampus",  "KO-hippocampus" ))
 # count how many cells from each gnt-tissue group  there are per cluster
-sum_per_gntissue_cluster_no_mc <- table(sce_no_mc$gntissue, sce_no_mc$clusters_named )
+sum_per_gntissue_cluster <- table(sce$gntissue, sce$clusters_named )
 
 # normalise per cluster, looking how the KO and WT are distributed
 # across the clusters, to give to both groups the same weight
-prop_per_cluster_no_mc <- prop.table(sum_per_gntissue_cluster_no_mc, margin = 1)
+prop_per_cluster <- prop.table(sum_per_gntissue_cluster, margin = 1)
 
 # calculate the proportions for each cluster
-prop_per_gnt_no_mc <- round(prop.table(prop_per_cluster_no_mc , margin = 2 )*100, 2)
+prop_per_gnt <- round(prop.table(prop_per_cluster , margin = 2 )*100, 2)
 
 # Display
-prop_per_gnt_no_mc<- as.data.frame(prop_per_gnt_no_mc)
-colnames(prop_per_gnt_no_mc) <- c("Genotype_Tissue", "cluster", "Proportion")
+prop_per_gnt<- as.data.frame(prop_per_gnt)
+colnames(prop_per_gnt) <- c("Genotype_Tissue", "cluster", "Proportion")
 
-#prop_per_gnt_no_mc %>% 
+#prop_per_gnt %>% 
  # filter(Genotype == "KO") %>% 
  # arrange(desc(Proportion))
 #
@@ -132,7 +125,7 @@ colnames(prop_per_gnt_no_mc) <- c("Genotype_Tissue", "cluster", "Proportion")
 visualise in a plot
 
 ```{r plot2}
-ggplot(data = prop_per_gnt_no_mc, aes(x = cluster, y = Proportion, fill = Genotype_Tissue)) +
+ggplot(data = prop_per_gnt, aes(x = cluster, y = Proportion, fill = Genotype_Tissue)) +
   geom_bar(position = "fill", stat = "identity") + theme_classic()+
   scale_fill_manual(values = col_2x_wt_het_ko) +
 theme(axis.text.x = element_text(angle = 45, hjust=1, vjust = 1)) +
