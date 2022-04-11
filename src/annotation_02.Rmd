@@ -475,7 +475,7 @@ if(!file.exists(here("outs", project, "markers_res0.3", "markers_res0.3.RDS"))){
 
 With the help of the known markers plotted above, the DE between
 clusters and the top expressed genes the celltype identity of every
-cluster has been identified. \# in progress
+cluster has been identified.
 
 ```{r}
 plotTSNE(sce, colour_by = "originalexp_snn_res.0.3", text_by = "originalexp_snn_res.0.3", force = 0) + scale_color_manual(values = cols)
@@ -524,11 +524,7 @@ each one of the subtypes is identified.
 
 <details>
 
-<summary>
-
-Click to expand markers
-
-</summary>
+<summary>Click to expand markers</summary>
 
 
 ```{r final-violin, fig.height=25, fig.width=9, cache=TRUE}
@@ -581,7 +577,7 @@ hypothesis.
     cells from the source clusters, resulting in `lib.size` ratios
     bellow unity.
 
-```{r paged.print=TRUE}
+```{r run-doublets, paged.print=TRUE}
 res_dbl <- findDoubletClusters(sce, sce$clusters_named)
 
 (res_dbl <- 
@@ -590,22 +586,39 @@ res_dbl %>%
   rownames_to_column("cluster"))
 
 # see which clusters are clearly outliers in the number of DE genes.
-res_dbl$cluster[isOutlier(res_dbl$num.de, type = "lower", log = T)]
+#res_dbl$cluster[isOutlier(res_dbl$num.de, type = "lower", log = T)]
 ```
 
 The most obvious doublets are "mNeuron-OPC", "Microglia-iOligo",
 "mNeuron-Oligo" and "OPC-Oligo" With low `num.de` and both library size
-ratios bellow 1. OPC and Oligo could seem to be a transitionning state, however they do express multiple markers from late Oligo. Microglia + Astrocytes or Oligos do have a library size
+ratios bellow 1. 
+
+OPC-Oligo could seem to be a transitioning state, however they do express multiple markers usually found in late Oligodendrocytes. Microglia + Astrocytes or Oligos do have a library size
 larger than the microglia clusters, but not larger than the astrocyte or
-oligo population. These populations could be microglia prunning bits of
-astrocytes or oligodendrocytes.
+oligo population. These populations could be microglia pruning bits of
+astrocytes or oligodendrocytes, we do not keep these populations in the 
+downstream analysis. Finally, Astrocyte-OPC is the last cluster we decide to 
+delete, as there are known populations of Oligo-Astrocytes in the mouse brain, but 
+we are unsure about OPC-Astrocytes and prefer to be stricter with the filtering.
 
-We delete the clusters mentioned above.
+<details>
 
-```{r paged.print=TRUE}
+<summary>Note on Astrocyte-OPCs:</summary>
+
+We also tested keeping them and rerunning doublet finder,
+                      source1       source2 num.de median.de          best     p.value lib.size1 lib.size2        prop
+OPC-Astrocyte           OPC_1   Astrocyte_2    149    3603.0         Gnao1    7.180342e-83   0.6135593 0.4465331 0.005588435            
+Oligo-Astrocyte       Oligo_1   Astrocyte_1    254    3264.0       mt-Atp6    3.848991e-35   0.8738298 0.4604424 0.013932279
+OEG             ChP_epithelia   Astrocyte_2    623    2344.0           Npy    1.935603e-29   1.5961975 0.8223610 0.001940429
+[...]
+Code in commit 0b2c63cd from the github repo
+
+</details>
+
+```{r filter-doublets, paged.print=TRUE}
 if (!file.exists(here("processed", project, "sce_anno_nodbl_02.RDS"))) {
   doublets <- c("mNeuron-OPC", "Microglia-iOligo", "mNeuron-Oligo", "OPC-Oligo", 
-"Microglia-Astrocyte", "Oligo-Microglia")
+"Microglia-Astrocyte", "Oligo-Microglia", "OPC-Astrocyte")
   sce <- sce[, !(sce$clusters_named %in% doublets)]
   sce$clusters_named <- droplevels(sce$clusters_named)
              
@@ -615,19 +628,19 @@ if (!file.exists(here("processed", project, "sce_anno_nodbl_02.RDS"))) {
   sce <- readRDS(here("processed", project, "sce_nodbl_anno_02.RDS"))
 }
 
-findDoubletClusters(sce, sce$clusters_named) %>% as.data.frame()
 
 ```
-```{r final-tsne}
+```{r final-tsne, warning=FALSE}
 plotTSNE(sce, colour_by = "clusters_named", text_by = "clusters_named", text_size = 3, force = 1) + scale_color_manual(values = cols)
 ```
+
 
 ## Markers
 
 ```{r final-violin-nodbl, fig.height=25, fig.width=9, cache=TRUE}
 # dbl
-doublets <- c("mNeuron-OPC", "Microglia-iOligo", "mNeuron-Oligo", "OPC-Oligo", 
-"Microglia-Astrocyte", "Oligo-Microglia")
+  doublets <- c("mNeuron-OPC", "Microglia-iOligo", "mNeuron-Oligo", "OPC-Oligo", 
+"Microglia-Astrocyte", "Oligo-Microglia", "OPC-Astrocyte")
 # create list of all markers ( cell level and subcluster level)
 annotation <- 
   annotation %>% subset(!(Cluster_name %in% doublets))
