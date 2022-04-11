@@ -1,0 +1,73 @@
+---
+title: "Milo"
+author: "Nadine Bestard"
+date: "11/04/2022"
+output:
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+#### set-up
+```{r message=FALSE, warning=FALSE}
+library(SingleCellExperiment) # manipulate sce
+library(scater) # plots
+library(here) # reproducible paths
+library(miloR) # DA abundance package
+```
+Milo vignette followed for this analyisis: [miloR](https://rawcdn.githack.com/MarioniLab/miloR/7c7f906b94a73e62e36e095ddb3e3567b414144e/vignettes/milo_gastrulation.html)
+
+```{r load}
+source(here("src/colours.R"))
+project <- "fire-mice"
+sce <- readRDS(here("processed", project, "sce_nodbl_anno_02.RDS")) 
+```
+
+# Differential abundance testing
+
+## Create a Milo object
+
+For differential abundance analysis on graph neighbourhoods we first construct a `Milo` object. This extends the [`SingleCellExperiment`](https://bioconductor.org/packages/release/bioc/html/SingleCellExperiment.html) class to store information about neighbourhoods on the KNN graph. 
+
+```{r}
+milo <- Milo(sce)
+milo
+```
+## Construct KNN graph
+
+We need to add the KNN graph to the Milo object. This is stored in the `graph` slot, in [`igraph`](https://igraph.org/r/) format. The `miloR` package includes functionality to build and store the graph from the PCA dimensions stored in the `reducedDim` slot. In this case, we specify that we want to build the graph from the MNN corrected PCA dimensions.
+
+For graph building you need to define a few parameters:
+
+- `d`: the number of reduced dimensions to use for KNN refinement. We recommend using the same $d$ used for KNN graph building.In our corrected dataset we have 23 dimensions.
+- `k`: this  affects the power of DA testing, since we need to have enough cells from each sample represented in a neighbourhood to estimate the variance between replicates. On the other side, increasing $k$ too much might lead to over-smoothing. We suggest to start by using the same value for $k$ used for KNN graph building for clustering and UMAP visualization. We will later use some heuristics to evaluate whether the value of $k$ should be increased. - in seurat we only modidied the resolutions for clustering, always used k=20. We will start by this value but might need to adjust. 
+
+```{r}
+milo <- buildGraph(milo, k = 20, d = 23, reduced.dim = "corrected")
+```
+
+## Defining representative neighbourhoods on the KNN graph
+
+We define the neighbourhood of a cell, the index, as the group of cells connected by an edge in the KNN graph to the index cell. For efficiency, we don't test for DA in the neighbourhood of every cell, but we sample as indices a subset of representative cells, using a KNN sampling algorithm used by [Gut et al. 2015](https://www.nature.com/articles/nmeth.3545). 
+
+As well as $d$ and $k$, for sampling we need to define a few additional parameters:
+
+- `prop`: the proportion of cells to randomly sample to start with. We suggest using `prop=0.1` for datasets of less than 30k cells. 
+<!-- For bigger datasets using `prop=0.05` should be sufficient (and makes computation faster). -->
+- `refined`: indicates whether you want to use the sampling refinement algorithm, or just pick cells at random. The default and recommended way to go is to use refinement. The only situation in which you might consider using `random` instead, is if you have batch corrected your data with a graph based correction algorithm, such as [BBKNN](https://github.com/Teichlab/bbknn), but the results of DA testing will be suboptimal.
+
+```{r}
+milo <- makeNhoods(milo, prop = 0.1, k = 20, d=23, refined = TRUE, reduced_dims = "corrected")
+```
+
+Once we have defined neighbourhoods, we plot the distribution of neighbourhood sizes (i.e. how many cells form each neighbourhood) to evaluate whether the value of $k$ used for graph building was appropriate. We can check this out using the `plotNhoodSizeHist` function. 
+
+As a rule of thumb we want to have an average neighbourhood size over 5 x N_samples. (5x12=60)
+
+```{r}
+plotNhoodSizeHist(milo)
+```
