@@ -1,0 +1,99 @@
+---
+title: "Differential Expressino Microglia edgeR"
+author: "Nadine Bestard"
+date: "24/03/2022"
+output:
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+#### set-up
+```{r message=FALSE, warning=FALSE}
+library(scran) # for scDE
+library(scater) # for aggregate counts
+library(edgeR) #for De
+library(here) # reproducible paths
+```
+```{r load}
+project <- "fire-mice"
+sce <- readRDS(here("processed", project, "sce_nodbl_anno_02.RDS")) 
+```
+
+```{r paths}
+dir.create(here("outs", project, "DE_edgeR"), showWarnings = FALSE, recursive = TRUE)
+dir.create(here("processed", project), showWarnings = FALSE, recursive = TRUE)
+```
+
+## Only Microglia and HETs
+
+We subset the object to only work with the Microglia, and produce DE genes in micrglia between the HETs and the WT.
+```{r}
+sce <- sce[,sce$clusters_named == "Microglia" & sce$genotype %in% c("HET", "WT")]
+sce$genotype <- droplevels(sce$genotype)
+```
+
+## Pre processed
+
+Sum the counts
+```{r}
+summed <- aggregateAcrossCells(sce, 
+    id=colData(sce)[,"Sample"])
+```
+
+```{r}
+# create DGElist
+dge_summed <- DGEList(counts(summed), samples=colData(summed))
+# filter out samples with low number of cells (with such big groups this shouldn't be a problem)
+dge_summed <- dge_summed[, summed$ncells >= 10]
+# Filter genes with specific function from edgeR
+keep <- filterByExpr(dge_summed, group=summed$genotype)
+dge_summed <- dge_summed[keep,]
+summary(keep)
+```
+
+## Run edgeR pipeline
+
+edgeR allows to add a design matrix, with the batch as a covariate, to account for batch differences in the differential expression
+
+```{r}
+dge_summed <- calcNormFactors(dge_summed)
+par(mfrow=c(2,4))
+for (i in seq_len(ncol(dge_summed))) {
+    plotMD(dge_summed, column=i)
+}
+```
+
+
+```{r}
+plotMDS(cpm(dge_summed, log=TRUE), 
+    col=ifelse(dge_summed$samples$genotype == "HET", "red", "blue"), main = "genotype")
+plotMDS(cpm(dge_summed, log=TRUE), 
+    col=ifelse(dge_summed$samples$tissue == "cortex", "red", "blue"), main = "tissue")
+plotMDS(cpm(dge_summed, log=TRUE), 
+    col=ifelse(dge_summed$samples$batch == "3", "red", 
+               ifelse(dge_summed$samples$batch == "4", "blue",
+                      ifelse(dge_summed$samples$batch == "5", "orange", "green"))),
+    main = "batch")
+
+# Build teh design
+# Reordering the genotype factor, treated should be second level
+dge_summed$samples$genotype <- factor(dge_summed$samples$genotype, levels = c("WT", "HET"))
+design <- model.matrix(~factor(chip) + factor(genotype), dge_summed$samples)
+
+# estimate dispersions
+dge_summed <- estimateDisp(dge_summed, design)
+fit <- glmQLFit(dge_summed, design, robust=TRUE)
+
+# Run DE
+de_results <- glmQLFTest(fit, coef=ncol(design))
+
+# save results
+write.csv(topTags(de_results, n= length(rownames(sce))), here("outs", project, "DE_edgeR","de_results_HET", "de_resutls_HET_Microglia.csv"))
+
+saveRDS(de_results, here("processed", project, "DE_microglia_HET_edgeR_de_results.RDS"))
+```
