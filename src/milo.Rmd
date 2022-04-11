@@ -44,10 +44,10 @@ We need to add the KNN graph to the Milo object. This is stored in the `graph` s
 For graph building you need to define a few parameters:
 
 - `d`: the number of reduced dimensions to use for KNN refinement. We recommend using the same $d$ used for KNN graph building.In our corrected dataset we have 23 dimensions.
-- `k`: this  affects the power of DA testing, since we need to have enough cells from each sample represented in a neighbourhood to estimate the variance between replicates. On the other side, increasing $k$ too much might lead to over-smoothing. We suggest to start by using the same value for $k$ used for KNN graph building for clustering and UMAP visualization. We will later use some heuristics to evaluate whether the value of $k$ should be increased. - in seurat we only modidied the resolutions for clustering, always used k=20. We will start by this value but might need to adjust. 
+- `k`: this  affects the power of DA testing, since we need to have enough cells from each sample represented in a neighbourhood to estimate the variance between replicates. On the other side, increasing $k$ too much might lead to over-smoothing. We suggest to start by using the same value for $k$ used for KNN graph building for clustering and UMAP visualization. We will later use some heuristics to evaluate whether the value of $k$ should be increased. - in seurat we only modidied the resolutions for clustering, always used k=20. However, clustering with scran similar number of clusters was obtained with k=60
 
 ```{r}
-milo <- buildGraph(milo, k = 20, d = 23, reduced.dim = "corrected")
+milo <- buildGraph(milo, k = 60, d = 23, reduced.dim = "corrected")
 ```
 
 ## Defining representative neighbourhoods on the KNN graph
@@ -61,7 +61,7 @@ As well as $d$ and $k$, for sampling we need to define a few additional paramete
 - `refined`: indicates whether you want to use the sampling refinement algorithm, or just pick cells at random. The default and recommended way to go is to use refinement. The only situation in which you might consider using `random` instead, is if you have batch corrected your data with a graph based correction algorithm, such as [BBKNN](https://github.com/Teichlab/bbknn), but the results of DA testing will be suboptimal.
 
 ```{r}
-milo <- makeNhoods(milo, prop = 0.1, k = 20, d=23, refined = TRUE, reduced_dims = "corrected")
+milo <- makeNhoods(milo, prop = 0.1, k = 60, d=23, refined = TRUE, reduced_dims = "corrected")
 ```
 
 Once we have defined neighbourhoods, we plot the distribution of neighbourhood sizes (i.e. how many cells form each neighbourhood) to evaluate whether the value of $k$ used for graph building was appropriate. We can check this out using the `plotNhoodSizeHist` function. 
@@ -70,4 +70,19 @@ As a rule of thumb we want to have an average neighbourhood size over 5 x N_samp
 
 ```{r}
 plotNhoodSizeHist(milo)
+```
+
+
+## Counting cells in neighbourhoods
+
+_Milo_ leverages the variation in cell numbers between replicates for the same experimental condition to test for differential abundance. Therefore we have to count how many cells from each sample are in each neighbourhood. We need to use the cell metadata and specify which column contains the sample information.
+
+```{r}
+milo <- countCells(milo, meta.data = as.data.frame(colData(milo)), sample="Sample")
+```
+
+This adds to the `Milo` object a $n \times m$ matrix, where $n$ is the number of neighbourhoods and $m$ is the number of experimental samples. Values indicate the number of cells from each sample counted in a neighbourhood. This count matrix will be used for DA testing.
+
+```{r}
+head(nhoodCounts(embryo_milo))
 ```
