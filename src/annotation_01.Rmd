@@ -479,11 +479,16 @@ sce$celltype <- as.factor(sce$originalexp_snn_res.0.6)
 # add the celltypes as described above in the correct order to replace the levels.
 levels(sce$celltype) <- celltype
 
+# same with the cluster_names
+cluster_names <- annotation$ClusterName
+sce$cluster_names <- as.factor(sce$originalexp_snn_res.0.6)
+levels(sce$cluster_names) <- cluster_names
 
  saveRDS(sce, here("processed", project, "sce_anno_01.RDS"))
 }
 plotTSNE(sce, colour_by = "celltype", text_by = "celltype", text_size = 3, force = 1) + scale_color_manual(values = cols)
- ```
+plotTSNE(sce, colour_by = "cluster_names", text_by = "cluster_names", text_size = 3, force = 1) + scale_color_manual(values = cols)
+```
 
 <!-- ## Marker plots -->
 

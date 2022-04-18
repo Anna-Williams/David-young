@@ -58,8 +58,8 @@ contribute to each cluster. Moreover we will keep in mind our experimental
 groups in order to ensure biological effects are not being lost.
 
 ```{r}
-plotTSNE(sce, colour_by = "originalexp_snn_res.0.6", point_size=0.5,
-          text_by = "originalexp_snn_res.0.6", text_size = 3) +
+plotTSNE(sce, colour_by = "cluster_names", point_size=0.5,
+          text_by = "cluster_names", text_size = 3) +
   scale_color_manual(values = cols) 
 ```
 
@@ -85,14 +85,14 @@ Select clusters with `r pct_cells` % cells having less than `r min_umi`umi
 counts.
 
 ```{r}
-umi_df <- as.data.frame(cbind(sce$total, as.character(sce$originalexp_snn_res.0.6)))
-colnames(umi_df) <- c("umi", "res.0.6")
+umi_df <- as.data.frame(cbind(sce$total, as.character(sce$cluster_names)))
+colnames(umi_df) <- c("umi", "cluster_names")
 
 # caculate the percentatges of cells that are "low umi"
 umi_df <- 
   umi_df %>% 
   mutate(low_umi = as.numeric(umi) < min_umi) %>% 
-  group_by(res.0.6) %>% 
+  group_by(cluster_names) %>% 
   summarise(n_low_umi = sum(low_umi), n_cells = n()) %>%
   mutate(pct_cell_low_umi = (n_low_umi/n_cells)*100) 
 umi_df %>% arrange(desc(pct_cell_low_umi))
@@ -101,7 +101,7 @@ umi_df %>% arrange(desc(pct_cell_low_umi))
 low_umi_clusters <- 
   umi_df %>% 
   filter(pct_cell_low_umi > pct_cells) %>% 
-  .$res.0.6
+  .$cluster_names
 ```
 
 The clusters flagged are `r low_umi_clusters`
@@ -111,7 +111,7 @@ The clusters flagged are `r low_umi_clusters`
 High mithocondrial genes is associated with stressed, lower quality, cells.
 
 ```{r}
-plotTSNE(sce, colour_by = "subsets_mt_percent", text_by = "originalexp_snn_res.0.6") + 
+plotTSNE(sce, colour_by = "subsets_mt_percent", text_by = "cluster_names") + 
   ggtitle("Percentatge mithocondrial genes")
 ```
 
@@ -124,13 +124,13 @@ Select clusters with `r pct_cells` % cells having more than `r pct_mt`%
 mithocondrial genes.
 
 ```{r}
-mt_df <- as.data.frame(cbind(sce$subsets_mt_percent, as.character(sce$originalexp_snn_res.0.6)))
-colnames(mt_df) <- c("subsets_mt_percent", "res06")
+mt_df <- as.data.frame(cbind(sce$subsets_mt_percent, as.character(sce$cluster_names)))
+colnames(mt_df) <- c("subsets_mt_percent", "cluster_names")
 
 mt_df <- 
   mt_df %>% 
   mutate(high_pct = as.numeric(subsets_mt_percent) > 10) %>% 
-  group_by(res06) %>% 
+  group_by(cluster_names) %>% 
   summarise(n_high_mt = sum(high_pct), n_cells = n()) %>% 
   mutate(pct_cell_high_mt = (n_high_mt/n_cells)*100) %>%  
   arrange(desc(pct_cell_high_mt))
@@ -138,7 +138,7 @@ mt_df
 high_mt_clusters <- 
   mt_df %>% 
   filter(pct_cell_high_mt > pct_cells) %>% 
-  .$res06
+  .$cluster_names
 
 ```
 
@@ -169,16 +169,15 @@ plotTSNE(sce, colour_by = "subsets_ribo_percent") +
   ggtitle("Percentatge ribosomal genes")
 ```
 
-
 ### Number of mice per cluster
 
 How many mice contribute to each cluster?
 
 ```{r mice-per-cluster}
 # count how many cells from each gnt group  there are per cluster
-sum_per_gnt_cluster <- table(sce$genotype, sce$originalexp_snn_res.0.6 )
+sum_per_gnt_cluster <- table(sce$genotype, sce$cluster_names )
 # for each cluster count how many cells are from each mice, dividing by KO and WT mice
-sum_per_mice_cluster <- table(sce$mouse, sce$genotype, sce$originalexp_snn_res.0.6 )
+sum_per_mice_cluster <- table(sce$mouse, sce$genotype, sce$cluster_names )
 # For each cluster sum of mice that do have cells on that cluster
 colSums(sum_per_mice_cluster > 0)
 
@@ -195,13 +194,23 @@ even absent in the fire mice nothing stands out.
 
 Detection of clusters formed by doublets/multiplets (i.e. multiple cells
 captured within the same droplet or reaction volume). The function test each
-cluster against the null hypothesis that it *does* consist of doublets. The null
-is rejected if a cluster has many DE genes that lie outside the expression
-limits defined by the "source" clusters.
+cluster against the null hypothesis that it *does* consist of doublets. The tool
+consider every possible triplet of clusters consisting of a query cluster and
+two putative "source" clusters. Under the null hypothesis that the query
+consists of doublets from the two sources, it computes the number of genes
+(`num.de`) that are differentially expressed in the same direction in the query
+cluster compared to both of the source clusters. Such genes would be unique
+markers for the query cluster and provide evidence against the null hypothesis.
+
+-   Clusters with the few unique genes (`num.de`) are more likely to be composed
+    of doublets.
+
+-   Potential doublets should also have larger library size than the cells from
+    the source clusters, resulting in `lib.size` ratios bellow unity.
 
 ```{r}
 if(!file.exists(here("outs",project,  "doublet_clusters_res0.6.csv"))){
-  res_dbl <- findDoubletClusters(sce, sce$originalexp_snn_res.0.6)
+  res_dbl <- findDoubletClusters(sce, sce$cluster_names)
   res_dbl <- res_dbl %>% 
     as.data.frame() %>% 
     rownames_to_column("cluster")
@@ -209,39 +218,58 @@ if(!file.exists(here("outs",project,  "doublet_clusters_res0.6.csv"))){
 }else{
   res_dbl <- read.csv(here("outs", project,  "doublet_clusters_res0.6.csv"), row.names = 1)
 }
+res_dbl
 ```
 
-Analyse the results, this includes:
+Analyse the results:
 
--   filtering for the clusters where the null hypothesis (of being a doublet)
-    was not rejected at a significance level of 5%
+microglia_OPCs OPCs_3 oligo_5 microglia_3 OPC_or_oligo microglia_2 and
+astrocyte_OPCs are the clusterst with less `num.de`.
 
--   filter for the clusters that are in average formed by cells with bigger
-    library sizes than its source clusters ( the umi counts of a doublet is
-    expected to be larger than for a single cell).
+microglia_OPCs, microglia_3 and microglia_2: These populations could be
+microglia pruning bits of astrocytes or oligodendrocytes, we do not keep these
+populations in the downstream analysis.
 
-<!-- -   Finally plot the clusters that were not already detected as poorer quality, -->
-<!--     along with the source clusters to have a closer look at these potential -->
-<!--     doublet cells. -->
+OPCs_3: Clear doublet as it expresses markers from neurons and OPCs.
+
+oligo_5: Potential doublet between two other clusters that are formed of
+doublets too, with very low `num.de`; we do not keep it.
+
+OPC_or_oligo: This could seem to be a transitioning state, however they do
+express multiple markers usually found in late Oligodendrocytes.
+
+astrocyte_OPCs: These cells could also be transitioning state, and the
+`lib.size` is not bellow the unity, so we first did a preliminary analysis
+keeping them, but reran doubletfinder after deleting the other doublet cluster
+and finaly decided to be stricter and deleting them.
+
+oligo_4: This cluster is kept, as there is supporting evidence for Astro-Oligos
+populations in the mouse brain, it will be renamed as astro-oligo in the next
+annotation. <https://doi.org/10.1101/2021.04.11.439393>
+
+<details>
+
+<summary>
+
+Note on astrocyte-OPCs:
+
+</summary>
+
+We also tested keeping them and rerunning doublet finder,
+
+                          source1       source2 num.de median.de          best     p.value lib.size1 lib.size2        prop
+    OPC-Astrocyte           OPC_1   Astrocyte_2    149    3603.0         Gnao1    7.180342e-83   0.6135593 0.4465331 0.005588435            
+    Oligo-Astrocyte       Oligo_1   Astrocyte_1    254    3264.0       mt-Atp6    3.848991e-35   0.8738298 0.4604424 0.013932279
+    OEG             ChP_epithelia   Astrocyte_2    623    2344.0           Npy    1.935603e-29   1.5961975 0.8223610 0.001940429
+    [...]
+
+Code in commit 0b2c63cd from the github repo, in annotation_02.rmd
+
+</details>
 
 ```{r}
-# filter rows where the null hypothesis was not rejected
-dbl_exploratory <- res_dbl %>% 
-  filter(p.value > 0.05) %>% 
-# Filter the ones that were not already known as poorer quality
-  filter(!(cluster %in% c( high_mt_clusters, low_umi_clusters))) %>% 
-  # filter for a ratio of lib size lower than 1 ( the doublets should have a bigger lib.size)
-  filter(lib.size1 < 1 & lib.size2 < 1)
-
-
-#  see which ones there are and from which they come from 
-dbl_exploratory
-# sce$dbl_exploratory <- ifelse(sce$originalexp_snn_res.0.6 %in% dbl_exploratory$cluster, TRUE, FALSE)
-# plotTSNE(sce[,sce$originalexp_snn_res.0.6 %in% c(dbl_exploratory$cluster, dbl_exploratory$source1, dbl_exploratory$source2)], text_by = "originalexp_snn_res.0.6", colour_by = "dbl_exploratory" )
-
+doublet<-c("microglia_OPCs", "OPCs_3", "oligo_5", "microglia_3", "OPC_or_oligo", "microglia_2", "astrocyte_OPCs")
 ```
-
-There wasn't any cluster with enough evidence to prove it is a doublet
 
 ### Control vs fire mice
 
@@ -254,12 +282,12 @@ sce_ko <- sce[,sce$genotype == "KO"]
 sce_ctr <- sce[,sce$genotype == "WT"]
 # plot them side by side
 gridExtra::grid.arrange(
-plotTSNE(sce_ko, colour_by = "originalexp_snn_res.0.6", point_size=0.5,
-         point_alpha = 0.3, text_by = "originalexp_snn_res.0.6", text_size = 3) +
+plotTSNE(sce_ko, colour_by = "cluster_names", point_size=0.5,
+         point_alpha = 0.3, text_by = "cluster_names", text_size = 3) +
   scale_color_manual(values = cols) +
   ggtitle("fire mice"),
-plotTSNE(sce_ctr, colour_by = "originalexp_snn_res.0.6", point_size=0.5,
-         point_alpha = 0.3, text_by = "originalexp_snn_res.0.6", text_size = 3) +
+plotTSNE(sce_ctr, colour_by = "cluster_names", point_size=0.5,
+         point_alpha = 0.3, text_by = "cluster_names", text_size = 3) +
   scale_color_manual(values = cols) +
   ggtitle("control"), 
 ncol = 2
@@ -274,10 +302,10 @@ control, and we normalise per number of cells per cluster.
 
 ```{r}
 # delete the microglia
-sce_no_mc <- sce[,!(sce$originalexp_snn_res.0.6 %in% c(5, 9, 25))]
+sce_no_mc <- sce[,!(sce$cluster_names %in% c(5, 9, 25))]
 
 # count how many cells from each gnt group  there are per cluster
-sum_per_gnt_cluster_no_mc <- table(sce_no_mc$genotype, sce_no_mc$originalexp_snn_res.0.6 )
+sum_per_gnt_cluster_no_mc <- table(sce_no_mc$genotype, sce_no_mc$cluster_names )
 
 # normalise per cluster, looking how the KO and WT are distributed
 # across the clusters, to give to both groups the same weight
@@ -322,15 +350,13 @@ difference_KO_WT <-
   .$cluster
 ```
 
-
 ```{r}
-gt_ko_pct <- unique(sce$originalexp_snn_res.0.6[sce$originalexp_snn_res.0.6 %in% c( high_mt_clusters, low_umi_clusters) &
-    (sce$originalexp_snn_res.0.6 %in% difference_KO_WT)])
+gt_ko_pct <- unique(sce$cluster_names[sce$cluster_names %in% c( high_mt_clusters, low_umi_clusters, doublet) &
+    (sce$cluster_names %in% difference_KO_WT)])
 ```
 
-There are `r length(gt_ko_pct)` clusters flagged as poor quality and also  more abundant in the KO
-
-
+There are `r length(gt_ko_pct)` clusters flagged as poor quality and also more
+abundant in the KO
 
 ### Cluster QC
 
@@ -340,13 +366,16 @@ the clusters highlighted as:
 
 -   high mt : majority of cells having more than 10 % mitochondrial genes
 
+-   doublet: clusters composed by cells that express markers from different cell
+    types.
+
 -   There was no clusters flagged from the other categories
 
 ```{r filterout, echo=TRUE}
-sce$filter_out <- sce$originalexp_snn_res.0.6 %in% c( high_mt_clusters, low_umi_clusters) 
+sce$filter_out <- sce$cluster_names %in% c( high_mt_clusters, low_umi_clusters, doublet) 
 filter_out <- sum(sce$filter_out)
 plotTSNE(sce, colour_by = "filter_out", point_size=0.5,
-         point_alpha = 0.3, text_by = "originalexp_snn_res.0.6", text_size = 3) 
+         point_alpha = 0.3, text_by = "cluster_names", text_size = 3) 
 plotTSNE(sce, colour_by = "filter_out", point_size=0.5,
          point_alpha = 0.3, text_by = "celltype", text_size = 3) 
 if (!file.exists(here("processed", project, "sce_clusterQC.RDS"))){
@@ -357,7 +386,6 @@ if (!file.exists(here("processed", project, "sce_clusterQC.RDS"))){
 
 ```
 
-
 This would filter `r filter_out` cells filtered out, leaving an object with
 `r sum(sce$filter_out == FALSE)`cells.
 
@@ -365,7 +393,11 @@ This would filter `r filter_out` cells filtered out, leaving an object with
 
 <details>
 
-<summary> Click to expand </summary>
+<summary>
+
+Click to expand
+
+</summary>
 
 ```{r session-info}
 sessionInfo()
