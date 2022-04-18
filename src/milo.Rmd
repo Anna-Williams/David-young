@@ -18,6 +18,8 @@ library(SingleCellExperiment) # manipulate sce
 library(scater) # plots
 library(here) # reproducible paths
 library(miloR) # DA abundance package
+library(dplyr) # distinct
+library(patchwork) #plots
 ```
 Milo vignette followed for this analyisis: [miloR](https://rawcdn.githack.com/MarioniLab/miloR/7c7f906b94a73e62e36e095ddb3e3567b414144e/vignettes/milo_gastrulation.html)
 
@@ -44,10 +46,10 @@ We need to add the KNN graph to the Milo object. This is stored in the `graph` s
 For graph building you need to define a few parameters:
 
 - `d`: the number of reduced dimensions to use for KNN refinement. We recommend using the same $d$ used for KNN graph building.In our corrected dataset we have 23 dimensions.
-- `k`: this  affects the power of DA testing, since we need to have enough cells from each sample represented in a neighbourhood to estimate the variance between replicates. On the other side, increasing $k$ too much might lead to over-smoothing. We suggest to start by using the same value for $k$ used for KNN graph building for clustering and UMAP visualization. We will later use some heuristics to evaluate whether the value of $k$ should be increased. - in seurat we only modidied the resolutions for clustering, always used k=20. However, clustering with scran similar number of clusters was obtained with k=60
+- `k`: this  affects the power of DA testing, since we need to have enough cells from each sample represented in a neighbourhood to estimate the variance between replicates. On the other side, increasing $k$ too much might lead to over-smoothing. We suggest to start by using the same value for $k$ used for KNN graph building for clustering and UMAP visualization. We will later use some heuristics to evaluate whether the value of $k$ should be increased.
 
 ```{r}
-milo <- buildGraph(milo, k = 60, d = 23, reduced.dim = "corrected")
+milo <- buildGraph(milo, k = 30, d = 23, reduced.dim = "corrected")
 ```
 
 ## Defining representative neighbourhoods on the KNN graph
@@ -61,7 +63,7 @@ As well as $d$ and $k$, for sampling we need to define a few additional paramete
 - `refined`: indicates whether you want to use the sampling refinement algorithm, or just pick cells at random. The default and recommended way to go is to use refinement. The only situation in which you might consider using `random` instead, is if you have batch corrected your data with a graph based correction algorithm, such as [BBKNN](https://github.com/Teichlab/bbknn), but the results of DA testing will be suboptimal.
 
 ```{r}
-milo <- makeNhoods(milo, prop = 0.1, k = 60, d=23, refined = TRUE, reduced_dims = "corrected")
+milo <- makeNhoods(milo, prop = 0.1, k = 30, d=23, refined = TRUE, reduced_dims = "corrected")
 ```
 
 Once we have defined neighbourhoods, we plot the distribution of neighbourhood sizes (i.e. how many cells form each neighbourhood) to evaluate whether the value of $k$ used for graph building was appropriate. We can check this out using the `plotNhoodSizeHist` function. 
@@ -77,12 +79,124 @@ plotNhoodSizeHist(milo)
 
 _Milo_ leverages the variation in cell numbers between replicates for the same experimental condition to test for differential abundance. Therefore we have to count how many cells from each sample are in each neighbourhood. We need to use the cell metadata and specify which column contains the sample information.
 
-```{r}
+```{r milo}
 milo <- countCells(milo, meta.data = as.data.frame(colData(milo)), sample="Sample")
 ```
 
 This adds to the `Milo` object a $n \times m$ matrix, where $n$ is the number of neighbourhoods and $m$ is the number of experimental samples. Values indicate the number of cells from each sample counted in a neighbourhood. This count matrix will be used for DA testing.
 
 ```{r}
-head(nhoodCounts(embryo_milo))
+head(nhoodCounts(milo))
 ```
+
+## Defining experimental design
+
+For this section we refer back to the [contrast vignette](https://github.com/MarioniLab/miloR/blob/master/vignettes/milo_contrasts.Rmd)
+
+The design matrix should match each sample to the experimental condition of interest for DA testing. We also include the `sequencing.batch` column in the design matrix. This represents a known technical covariate that we want to account for in DA testing. 
+
+```{r}
+design <- data.frame(colData(milo))[,c("Sample", "genotype", "batch")]
+design$batch <- as.factor(design$batch)
+design <- distinct(design)
+rownames(design) <- design$Sample
+contrastKO <- c("genotypeKO - genotypeWT") # the syntax is <VariableName><ConditionLevel> - <VariableName><ControlLevel>
+# we need to use the ~ 0 + Variable expression here so that we have all of the levels of our variable as separate columns in our model matrix
+contrastHET <- c("genotypeHET - genotypeWT")
+
+
+```
+
+## Computing neighbourhood connectivity
+
+Milo uses an adaptation of the Spatial FDR correction introduced by [cydar](https://bioconductor.org/packages/release/bioc/html/cydar.html), where we correct p-values accounting for the amount of overlap between neighbourhoods. Specifically, each hypothesis test P-value is weighted by the reciprocal of the kth nearest neighbour distance. To use this statistic we first need to store the distances between nearest neighbors in the Milo object. This is done by the `calcNhoodDistance` function
+N.B. this step is the most time consuming of the analysis workflow and might take a "couple" (this takes ages! ) of minutes for large (or not that large) datasets.
+
+```{r long-step}
+milo <- calcNhoodDistance(milo, d=23, reduced.dim = "corrected")
+```
+
+## Testing KO
+```{r test-da}
+# we need to use the ~ 0 + Variable expression here so that we have all of the levels of our variable as separate columns in our model matrix
+da_results <- testNhoods(milo, design = ~ 0 + genotype, design.df = design, model.contrasts = contrastKO, reduced.dim = "corrected")
+table(da_results$SpatialFDR < 0.1)
+```
+This calculates a Fold-change and corrected P-value for each neighbourhood, which indicates whether there is significant differential abundance between developmental stages. The main statistics we consider here are: 
+
+- `logFC`: indicates the log-Fold change in cell numbers between samples from E7.5 and samples from E7.0
+- `PValue`: reports P-values before FDR correction
+- `SpatialFDR`: reports P-values corrected for multiple testing accounting for overlap between neighbourhoods
+
+```{r arrange}
+da_results %>%
+  arrange(SpatialFDR) %>%
+  head() 
+```
+
+
+# Inspecting DA testing results
+
+We can start inspecting the results of our DA analysis from a couple of standard diagnostic plots. 
+We first inspect the distribution of uncorrected P values, to verify that the test was balanced.
+
+```{r}
+ggplot(da_results, aes(PValue)) + geom_histogram(bins=50)
+```
+
+Then we visualize the test results with a volcano plot (remember that each point here represents a neighbourhood, _not_ a cell).
+
+```{r, dev="jpeg"}
+ggplot(da_results, aes(logFC, -log10(SpatialFDR))) + 
+  geom_point() +
+  geom_hline(yintercept = 1) ## Mark significance threshold (10% FDR)
+```
+
+
+To visualize DA results relating them to the embedding of single cells, we can build an abstracted graph of neighbourhoods that we can superimpose on the single-cell embedding. Here each node represents a neighbourhood, while edges indicate how many cells two neighbourhoods have in common. Here the layout of nodes is determined by the position of the index cell in the UMAP embedding of all single-cells. The neighbourhoods displaying significant DA are colored by their log-Fold Change.
+
+```{r, fig.width=15, fig.height=8, dev="jpeg"}
+milo <- buildNhoodGraph(milo)
+## Plot single-cell UMAP
+tsne_pl <- plotReducedDim(milo, dimred = "TSNE", colour_by="genotype", text_by = "celltype", 
+                          text_size = 3, point_size=0.5) +
+  guides(fill="none")
+## Plot neighbourhood graph
+nh_graph_pl <- plotNhoodGraphDA(milo, da_results, layout="TSNE",alpha=0.1) 
+  
+tsne_pl + nh_graph_pl +
+  plot_layout(guides="collect")
+```
+
+We might also be interested in visualizing whether DA is particularly evident in certain cell types. To do this, we assign a cell type label to each neighbourhood by finding the most abundant cell type within cells in each neighbourhood. We can label neighbourhoods in the results `data.frame` using the function `annotateNhoods`. This also saves the fraction of cells harbouring the label.
+
+```{r annotate}
+da_results <- annotateNhoods(milo, da_results, coldata_col = "clusters_named")
+head(da_results)
+```
+
+While neighbourhoods tend to be homogeneous, we can define a threshold for `clusters_named_fraction` to exclude neighbourhoods that are a mix of cell types. 
+
+```{r}
+ggplot(da_results, aes(clusters_named_fraction)) + geom_histogram(bins=50)
+```
+```{r}
+da_results$clusters_named <- ifelse(da_results$clusters_named_fraction < 0.8, "Mixed", da_results$clusters_named)
+```
+
+Now we can visualize the distribution of DA Fold Changes in different cell types
+
+```{r, fig.height=7, fig.width=7, dev="jpeg"}
+plotDAbeeswarm(da_results, group.by = "clusters_named")
+```
+
+<details>
+  <summary>**Session Info**</summary>
+  
+```{r}
+sessionInfo()
+```
+
+</details>
+
+
