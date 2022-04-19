@@ -20,13 +20,15 @@ library(scater) # For qcs
 library(scran) # for normalisation, feature selection
 library(ggplot2) # To add titles to plots
 library(batchelor) # Batch correction
+library(patchwork) # agregate plots
+library(pals) # for palettes with large n
 ```
 
 ```{r load-sce}
 
 project <- "fire-mice"
 sce <- readRDS(here("processed", project, "sce_clusterQC.RDS"))
-
+source(here("src/colours.R"))
 ```
 
 The object has `r dim(sce)[1]` genes and `r dim(sce)[2]` cells.
@@ -37,21 +39,56 @@ detected genes: 429 - 7111
 sum umi: 462 - 19024
 mt: 14.37%
 
-These thresholds and will not be modified.
 
 <details>
 
 <summary> Click to expand plots </summary>
+
+### Violin plots
+
+Split by sample, colour by cell type
 ```{r}
-plotColData(sce, x = "Sample", y = "subsets_mt_percent") +
+plotColData(sce, x = "Sample", y = "subsets_mt_percent", colour_by = "cluster_names") +
+  scale_y_log10() + ggtitle("mt genes") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +  scale_color_manual(values = cols)
+plotColData(sce, x = "Sample", y = "detected", colour_by = "cluster_names") +
+  scale_y_log10() + ggtitle("Detected genes log scale") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +  scale_color_manual(values = cols)
+plotColData(sce, x = "Sample", y = "sum", colour_by = "cluster_names") +
   scale_y_log10() + ggtitle("Total count log scale") +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
-plotColData(sce, x = "Sample", y = "detected") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +  scale_color_manual(values = cols)
+```
+
+Split by cell type
+```{r}
+plotColData(sce, x = "cluster_names", y = "subsets_mt_percent", colour_by = "Sample") +
+   ggtitle("mt genes") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) + 
+  scale_color_manual(values = cols)
+plotColData(sce, x = "cluster_names", y = "detected",  colour_by = "Sample") +
+   ggtitle("Detected genes") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) + 
+  scale_color_manual(values = cols)
+
+plotColData(sce, x = "cluster_names", y = "sum",  colour_by = "Sample") +
+  ggtitle("Total count") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) + 
+  scale_color_manual(values = cols)
+```
+
+Split by cell type, log scales
+```{r}
+plotColData(sce, x = "cluster_names", y = "detected",  colour_by = "Sample") +
+  scale_y_log10() + ggtitle("Detected genes log scale") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +  scale_color_manual(values = cols)
+plotColData(sce, x = "cluster_names", y = "sum",  colour_by = "Sample") +
   scale_y_log10() + ggtitle("Total count log scale") +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
-plotColData(sce, x = "Sample", y = "sum") +
-  scale_y_log10() + ggtitle("Total count log scale") +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) + 
+  scale_color_manual(values = cols)
+```
+
+
+```{r}
 hist(
   sce$detected,
   breaks = 100
@@ -65,8 +102,24 @@ hist(
   breaks = 100
 )
 ```
-</details>
 
+
+### Scatter plots
+
+```{r}
+list_sce <- lapply(unique(sce$Sample), function(X){subset(sce, , Sample = X)})
+list_plots <- lapply(list_sce, function(sce){
+plotColData(sce, x = "sum", y = "subsets_mt_percent", colour_by = "cluster_names")
+
+})
+wrap_plots(list_plots)
+
+plotColData(sce, x = "sum", y = "subsets_mt_percent", colour_by = "Sample")
+plotColData(sce, x = "sum", y = "detected", colour_by = "cluster_names")
+plotColData(sce, x = "sum", y = "detected", colour_by = "cluster_names")
+```
+
+</details>
 
 # Gene QC
 
