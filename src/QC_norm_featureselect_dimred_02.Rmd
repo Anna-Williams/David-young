@@ -5,15 +5,18 @@ date: "17/01/2022"
 output:
   html_document:
     code_folding: hide
+editor_options: 
+  markdown: 
+    wrap: 72
 ---
 
-
 # Set-up
+
 ```{r output-code, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r set-up, message=FALSE, warning=FALSE}
+```{r set-up, message=FALSE, warning=FALSE, eval=TRUE }
 library(here) # for reproducible paths
 library(SingleCellExperiment)
 library(scater) # For qcs
@@ -24,71 +27,109 @@ library(patchwork) # agregate plots
 library(pals) # for palettes with large n
 ```
 
-```{r load-sce}
+```{r load-sce, eval=TRUE}
 
 project <- "fire-mice"
 sce <- readRDS(here("processed", project, "sce_clusterQC.RDS"))
 source(here("src/colours.R"))
+levels(sce$genotype) <- levels(c("WT", "HET", "KO"))
 ```
 
 The object has `r dim(sce)[1]` genes and `r dim(sce)[2]` cells.
 
 # Cell QC
-Previous thresholds were:
-detected genes: 429 - 7111 
-sum umi: 462 - 19024
-mt: 14.37%
 
+Previous thresholds were: 
+
+detected genes: 429 - 7111 
+
+sum umi: 462 -
+19024 
+
+mt: 14.37%
 
 <details>
 
-<summary> Click to expand plots </summary>
+<summary>
+
+Click to expand plots
+
+</summary>
 
 ### Violin plots
 
-Split by sample, colour by cell type
-```{r}
-plotColData(sce, x = "Sample", y = "subsets_mt_percent", colour_by = "cluster_names") +
+Split by sample
+
+```{r violinsample, eval=TRUE}
+plotColData(sce, x = "Sample", y = "subsets_mt_percent") +
   scale_y_log10() + ggtitle("mt genes") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +  scale_color_manual(values = cols)
-plotColData(sce, x = "Sample", y = "detected", colour_by = "cluster_names") +
+plotColData(sce, x = "Sample", y = "detected") +
   scale_y_log10() + ggtitle("Detected genes log scale") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +  scale_color_manual(values = cols)
-plotColData(sce, x = "Sample", y = "sum", colour_by = "cluster_names") +
+plotColData(sce, x = "Sample", y = "sum") +
   scale_y_log10() + ggtitle("Total count log scale") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +  scale_color_manual(values = cols)
 ```
 
 Split by cell type
-```{r}
+
+```{r violincluster, eval=TRUE}
+#mt
 plotColData(sce, x = "cluster_names", y = "subsets_mt_percent", colour_by = "Sample") +
+scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
    ggtitle("mt genes") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) + 
   scale_color_manual(values = cols)
+#detected
 plotColData(sce, x = "cluster_names", y = "detected",  colour_by = "Sample") +
+  scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
    ggtitle("Detected genes") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) + 
   scale_color_manual(values = cols)
-
+#sum
 plotColData(sce, x = "cluster_names", y = "sum",  colour_by = "Sample") +
+  scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
   ggtitle("Total count") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) + 
   scale_color_manual(values = cols)
 ```
 
 Split by cell type, log scales
-```{r}
+
+```{r violinglog, eval=TRUE}
 plotColData(sce, x = "cluster_names", y = "detected",  colour_by = "Sample") +
-  scale_y_log10() + ggtitle("Detected genes log scale") +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +  scale_color_manual(values = cols)
+  scale_y_log10(breaks = scales::pretty_breaks(n = 12)) + 
+  ggtitle("Detected genes log scale") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +  scale_color_manual(values = cols) 
+
+
 plotColData(sce, x = "cluster_names", y = "sum",  colour_by = "Sample") +
-  scale_y_log10() + ggtitle("Total count log scale") +
+ scale_y_log10(breaks = scales::pretty_breaks(n = 12))+
+  ggtitle("Total count log scale") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) + 
   scale_color_manual(values = cols)
 ```
 
+Split by sample type, facet wrap
 
-```{r}
+```{r violinwrap, fig.height=14, fig.width=14, eval=TRUE}
+
+# detected
+plotColData(sce, x = "Sample", y = "detected",  colour_by = "genotype", other_fields = "cluster_names") +
+  scale_y_log10(breaks = scales::pretty_breaks(n = 12)) + 
+  ggtitle("Detected genes log scale") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +           scale_color_manual(values = col_wt_het_ko)  + facet_wrap(~cluster_names)
+# sum
+plotColData(sce, x = "Sample", y = "sum",  colour_by = "genotype", other_fields = "cluster_names") +
+ scale_y_log10(breaks = scales::pretty_breaks(n = 12))+
+  ggtitle("Total count log scale") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) + 
+  scale_color_manual(values = col_wt_het_ko)+ facet_wrap(~cluster_names)
+
+```
+
+```{r hist}
 hist(
   sce$detected,
   breaks = 100
@@ -103,38 +144,128 @@ hist(
 )
 ```
 
-
 ### Scatter plots
 
-```{r}
-list_sce <- lapply(unique(sce$Sample), function(X){subset(sce, , Sample = X)})
-list_plots <- lapply(list_sce, function(sce){
-plotColData(sce, x = "sum", y = "subsets_mt_percent", colour_by = "cluster_names")
+```{r scatter, fig.height=14, fig.width=14}
 
-})
-wrap_plots(list_plots)
+plotColData(sce, x = "sum", y = "subsets_mt_percent", colour_by = "genotype", other_fields = "cluster_names") + facet_wrap(~cluster_names) + 
+  scale_color_manual(values = col_wt_het_ko)
 
-plotColData(sce, x = "sum", y = "subsets_mt_percent", colour_by = "Sample")
-plotColData(sce, x = "sum", y = "detected", colour_by = "cluster_names")
-plotColData(sce, x = "sum", y = "detected", colour_by = "cluster_names")
+plotColData(sce, x = "sum", y = "detected", colour_by = "genotype", other_fields = "cluster_names") + facet_wrap(~cluster_names) + 
+  scale_color_manual(values = col_wt_het_ko)
+
+```
+
+```{r scatter2, fig.height=14, fig.width=14, eval=TRUE}
+
+plotColData(sce, x = "sum", y = "subsets_mt_percent", colour_by = "Sample", other_fields = "cluster_names") + facet_wrap(~cluster_names) + 
+  scale_color_manual(values = cols)
+
+plotColData(sce, x = "sum", y = "detected", colour_by = "Sample", other_fields = "cluster_names") + facet_wrap(~cluster_names) + 
+  scale_color_manual(values = cols)
+
 ```
 
 </details>
 
+We set the thresholds for each celltype:
+
+**Sum- Detected**
+
+OPCs 3000 -1500
+
+oligo 5000-1500
+
+Astrocyte 2000 -1000
+
+Microglia 3000 -1500
+
+endothelial keep same
+
+immature_neurons 4000 -1500
+
+mature_neurons 2500 -1500
+
+BAMS keep same
+
+oligo_astrocytes keep same
+
+immune 2000 -1000
+
+pericytes 2000 -1000
+
+ChP_epithelial 2000 -1000
+
+**Mt**
+
+all 10% except astrocytes, keep the same
+
+```{r subset, eval=TRUE}
+
+# create vector with same levels as the celltype to replace by thresholds for each
+sce$celltype <- droplevels(sce$celltype)
+sce$threshold_umi <- (sce$celltype)
+sce$threshold_detected <- (sce$celltype)
+sce$threshold_mt <- sce$celltype
+#to get the order:
+#dput(levels(sce$threshold_umi))
+#c("OPC", "oligo", "astrocyte", "microglia", "OPC?", "endothelial", "immature_neurons", "mature_neurons", "mono", "pericytes", "BAMs", "ChP_epithelial", "oligo-astros")
+
+# replace 
+levels(sce$threshold_umi) <- c(3000, 5000, 2000, 3000, 3000, 462, 
+4000, 25000, 2000, 2000, 462, 
+2000, 462)
+levels(sce$threshold_detected) <- c(1500, 1500, 1000, 1500, 1500, 429, 
+1500, 1500, 1000, 1000, 462, 
+1000, 462)
+levels(sce$threshold_mt) <- c(10, 10, 15, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10)
+
+# transform the factor into numeric
+sce$threshold_detected <- as.numeric(as.character(sce$threshold_detected))
+sce$threshold_umi <- as.numeric(as.character(sce$threshold_umi))
+sce$threshold_mt <- as.numeric(as.character(sce$threshold_mt))
+
+# set thresholds
+discard_umi <- sce$sum < sce$threshold_umi
+discard_detected <- sce$detected < sce$detected
+discard_mt <- sce$subsets_mt_percent > sce$threshold_mt
+discard <- discard_umi | discard_detected | discard_mt
+
+# subset
+sce <- sce[,!discard]
+```
+
+We discard `r sum(discard_umi)` cells due to umi counts,
+`r sum(discard_detected)` due to detected genes and `r sum(discard_mt)`
+cells for high mt percentatge.
+
+in total we discard `r sum(discard)` cells
+
 # Gene QC
 
-In the preliminary analysis we only deleted genes that had less than 2 cells expressing it, now 
-we filter all genes with less than 10 cells expressing it
-```{r}
+In the preliminary analysis we only deleted genes that had less than 2
+cells expressing it, now we filter all genes with less than 10 cells
+expressing it
+
+```{r gene, eval=TRUE}
 # at least 10 cells should express the gene
 keep_feature <- rowSums(counts(sce) > 0) > 10
 sce <- sce[keep_feature,]
 ```
 
+We keep `r sum(keep_feature)` genes
+
+```{r}
+if(!file.exists(here("processed", project,  "sce_QC_02.RDS"))){
+  saveRDS(sce, here("processed", project,  "sce_QC_02.RDS"))
+  }
+```
+
+Final dimension is  `r dim(sce)`
 
 # Normalisation
 
-```{r eval=FALSE}
+```{r normalisation}
 ## Normalise by deconvolution ---
 if(!file.exists(here("processed", project,  "sce_norm_02.RDS"))){
 # For reproducibility
@@ -155,11 +286,12 @@ saveRDS(sce, here("processed", project,  "sce_norm_02.RDS"))
 
 # Feature selection
 
-After the quality control the variable genes need to be selected again to better represent the variance in this cleaned dataset.
-We follow the same methods than for our first feature selection, selecting here for 
+After the quality control the variable genes need to be selected again
+to better represent the variance in this cleaned dataset. We follow the
+same methods than for our first feature selection, selecting here for
 the top 2000 genes.
 
-```{r}
+```{r featureselect}
 gene_var_df <- modelGeneVar(sce)
 gene_var <- metadata(gene_var_df)
 plot(gene_var$mean, gene_var$var, xlab= "Mean of log-expression", ylab= "Variance of log-expression")
@@ -169,10 +301,12 @@ hvgs <- getTopHVGs(gene_var_df, n=2000)
 # save them in the object
 rowSubset(sce) <- hvgs
 ```
+
 # Dimensionality reduction
 
 ## Run PCA and choose PCs
-```{r}
+
+```{r }
 if(!file.exists(here("processed", project,  "sce_dimred_02.RDS"))){
 set.seed(1000)
 sce <- runPCA(sce)
@@ -182,20 +316,22 @@ plot(pct_var, log="y", xlab="PC", ylab="pct variance explained")
 
 
 
- #will keep 26PCs 
+ #will keep 28PCs 
 
 #keep the previous dimensional reduction just in case
 reducedDim(sce, "PCA_all") <- reducedDim(sce, "PCA")
 # And replace the default PCA with the reduced PCs
-reducedDim(sce, "PCA") <- reducedDim(sce, "PCA")[,1:26]
+reducedDim(sce, "PCA") <- reducedDim(sce, "PCA")[,1:28]
 }
 ```
 
 ## Visualisation
+
 For visualisation, reduce to 2 dimensions. Non linear reductions.
 
 ### UMAP and TSNE
-```{r}
+
+```{r }
 if(!file.exists(here("processed", project,  "sce_dimred_02.RDS"))){
 sce <- runUMAP(sce, dimred="PCA")
 plotReducedDim(sce, dimred="UMAP", colour_by="genotype", point_size=0.1, point_alpha = 0.3)
@@ -211,7 +347,8 @@ saveRDS(sce, here("processed", project, "sce_dimred_02.RDS"))
 }
 ```
 
-## Rerrun barch correction
+## Rerrun batch correction
+
 ```{r batch, message=FALSE, warning=FALSE}
 if (!(file.exists(
   here("processed", project,  "sce_corrected_02.RDS")
@@ -239,4 +376,3 @@ saveRDS( sce, here("processed", project,  "sce_corrected_02.RDS"))
 plotReducedDim(sce, colour_by= "chip", dimred = "TSNE") + 
       ggtitle("TSNE dimensional reduction corrected")
 ```
-
