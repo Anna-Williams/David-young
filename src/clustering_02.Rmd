@@ -182,35 +182,45 @@ clustree(sce, prefix = "cluster_k", edge_arrow = FALSE)
 
 ```{r seurat, warning=FALSE}
 #only run if first time
-if (!file.exists( here("processed", project, "srt_clusters_02.RDS"))) {
-srt <- as.Seurat(sce)
-# delete old clustering
-srt_cluster_names <- grep("originalexp_snn_res", names(srt@meta.data), value = TRUE)
-for(cluster in srt_cluster_names){
-  srt[[cluster]]<-NULL
-}
-srt <- FindNeighbors(srt, reduction = "corrected", dims = 1:23)
-srt <- FindClusters(srt, 
-                    resolution = c(0.01, 0.04, 0.05, 
-                                 seq(from = 0.1, to = 1, by = 0.1))
-                   )
-srt_cluster_names <- grep("originalexp_snn_res", names(srt@meta.data), value = TRUE)
-srt_clusters_metadata <- srt[[srt_cluster_names]]
-
-saveRDS(srt_clusters_metadata, here("processed", project, "srt_clusters_02.RDS"))
-
-plot_list_func(srt, 
-               col_pattern="originalexp_snn_res.", 
-               plot_cols = c( unname(polychrome()), unname(watlington())),
-               reduction = "TSNE", 
-               label_size = 4 
-               )
-
-DimPlot(srt, reduction = "TSNE", group.by = "originalexp_snn_res.1", label = TRUE)
-
+if (!file.exists(here("processed", project, "srt_clusters_02.RDS"))) {
+  
+  srt <- as.Seurat(sce)
+  # delete old clustering
+  srt_cluster_names <-
+    grep("originalexp_snn_res", names(srt@meta.data), value = TRUE)
+  for (cluster in srt_cluster_names) {
+    # delete previous to ensure right 
+    srt[[cluster]] <- NULL
+  }
+  srt <- FindNeighbors(srt, reduction = "corrected", dims = 1:23)
+  srt <- FindClusters(srt,
+                      resolution = c(0.01, 0.04, 0.05,
+                                     seq(
+                                       from = 0.1, to = 1, by = 0.1
+                                     )))
+  srt_cluster_names <-
+    grep("originalexp_snn_res", names(srt@meta.data), value = TRUE)
+  srt_clusters_metadata <- srt[[srt_cluster_names]]
+  
+  saveRDS(srt_clusters_metadata,
+          here("processed", project, "srt_clusters_02.RDS"))
+  
+  plot_list_func(
+    srt,
+    col_pattern = "originalexp_snn_res.",
+    plot_cols = c(unname(polychrome()), unname(watlington())),
+    reduction = "TSNE",
+    label_size = 4
+  )
+  
+  DimPlot(srt,
+          reduction = "TSNE",
+          group.by = "originalexp_snn_res.1",
+          label = TRUE)
+  
 } else{
   srt_clusters_metadata <-
-    readRDS( here("processed", project, "srt_clusters_02.RDS"))
+    readRDS(here("processed", project, "srt_clusters_02.RDS"))
 }
 
 ```
@@ -225,17 +235,14 @@ if (!file.exists( here("processed", project, "sce_clusters_02.RDS"))) {
 # check the cell names are the same
 identical(row.names(colData(sce)), row.names(srt_clusters_metadata))
 
+# delete old clustering
+  srt_cluster_names <-
+    grep("originalexp_snn_res", names(srt_clusters_metadata), value = TRUE)
+  for (cluster in srt_cluster_names) {
+  colData(sce)[[cluster]] <- NULL
+  }
 # add them
 colData(sce) <- cbind(colData(sce), srt_clusters_metadata)
-
-# add rough annotation
-sce_anno <- readRDS(here("processed/fire-mice/sce_corrected_02.RDS"))
-celltype <- colData(sce_anno)["celltype"]
-sce_anno <- readRDS(here("processed/fire-mice/sce_clusterQC.RDS"))
-celltype <- colData(sce_anno)["celltype"]
-identical(row.names(colData(sce)), row.names(celltype))
-sce$celltype <- celltype$celltype
-
 
 ## save
 saveRDS(sce, here("processed", project, "sce_clusters_02.RDS"))
