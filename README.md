@@ -12,17 +12,15 @@
 
 -   Clustering at different resolutions, [clustering_01](src/clustering_01_young_jpriller)
 
-**To Do/ In Progress**
-
 -  First rough annotation in [annotation_01](src/annotation_01_young_jpriller) 
 
 - [ClusterQC](src/cluster_QC_01_young_jpriller) 
 
-
--  Stricter cell and gene QC; dimensional reduction and feature selection with the cleaned data[QC_norm_featrueselect_dimred_02](src/QC_norm_featureselect_dimred_02_stop) - **separate cell types**
+-  Stricter cell and gene QC; dimensional reduction and feature selection with the cleaned data[QC_norm_featrueselect_dimred_02](src/QC_norm_featureselect_dimred_02)
 
 -  Clustering with different resolutions [clustering_02](src/clustering_02_young_jpriller_stop) - **try to get the BAMs separate from the other immune**
 
+**To Do/ In Progress**
 
 -  Annotation [annotation_02_res0.3](src/annotation_02_young_jpriller_stop)
 
