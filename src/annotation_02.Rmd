@@ -1,5 +1,5 @@
 ---
-title: "Annotation cluster res 0.3"
+title: "Annotation cluster res 0.4"
 author: "NadineBestard"
 date: "30/03/2021"
 output:
@@ -51,7 +51,7 @@ if (!file.exists(here("processed", project, "sce_anno_02.RDS"))) {
 First annotation with known markers
 
 ```{r}
-plotTSNE(sce, colour_by = "originalexp_snn_res.0.3", text_by = "originalexp_snn_res.0.3", force = 0) + scale_color_manual(values = cols)
+plotTSNE(sce, colour_by = "originalexp_snn_res.0.4", text_by = "originalexp_snn_res.0.4", force = 0) + scale_color_manual(values = cols)
 ```
 
 <details>
@@ -68,7 +68,7 @@ wrap_plots(list_plots) +  plot_annotation(title = "Neurons")
 
 ```{r violin-neuro, fig.height=4}
 plotExpression(sce, features=c("Snap25", "Stmn2", "Rbfox3", "Gabrb2") ,
-    x="originalexp_snn_res.0.3", colour_by = "originalexp_snn_res.0.3", ncol=1) +  scale_color_manual(values = cols)
+    x="originalexp_snn_res.0.4", colour_by = "originalexp_snn_res.0.4", ncol=1) +  scale_color_manual(values = cols)
 ```
 
 ```{r 4-feature-plots-default, cache=TRUE}
@@ -81,7 +81,7 @@ wrap_plots(list_plots) +  plot_annotation(title =  "Inhibitory Neurons")
 
 ```{r violin-neuroin, fig.height=4, cache=TRUE}
 plotExpression(sce, features=c("Gad1", "Gad2", "Slc32a1", "Pvalb"),
-    x="originalexp_snn_res.0.3", colour_by = "originalexp_snn_res.0.3", ncol=1) +  scale_color_manual(values = cols)
+    x="originalexp_snn_res.0.4", colour_by = "originalexp_snn_res.0.4", ncol=1) +  scale_color_manual(values = cols)
 ```
 
 ```{r one-line, fig.height=3, fig.width=9, cache=TRUE}
@@ -94,7 +94,7 @@ wrap_plots(list_plots) +  plot_annotation(title =  "Exitatory Neurons")
 
 ```{r violin-neuroex, fig.height=3, cache=TRUE}
 plotExpression(sce, features=c("Satb2", "Slc12a6", "Slc17a7"),
-    x="originalexp_snn_res.0.3", colour_by = "originalexp_snn_res.0.3", ncol=1) +  scale_color_manual(values = cols)
+    x="originalexp_snn_res.0.4", colour_by = "originalexp_snn_res.0.4", ncol=1) +  scale_color_manual(values = cols)
 ```
 
 ```{r 4-plots, cache=TRUE}
@@ -106,7 +106,7 @@ wrap_plots(list_plots) +  plot_annotation(title =  "RBFO3+ Neurons")
 
 ```{r violin-neurorbfox, fig.height=4, cache=TRUE}
 plotExpression(sce, features=c("Cdh15", "Calb2", "Rbfox3", "Reln"),
-    x="originalexp_snn_res.0.3", colour_by = "originalexp_snn_res.0.3", ncol=1) +  scale_color_manual(values = cols)
+    x="originalexp_snn_res.0.4", colour_by = "originalexp_snn_res.0.4", ncol=1) +  scale_color_manual(values = cols)
 ```
 
 </details>
@@ -134,7 +134,7 @@ plotExpression(sce, features=c( "Lamb1" ,
                                      "Col4a1", 
                                      "Fn1", 
                                      "Lama2"),
-    x="originalexp_snn_res.0.3", colour_by = "originalexp_snn_res.0.3", ncol=1) +  scale_color_manual(values = cols)
+    x="originalexp_snn_res.0.4", colour_by = "originalexp_snn_res.0.4", ncol=1) +  scale_color_manual(values = cols)
 ```
 
 ```{r 3lines-feature-plots, fig.height=8, cache=TRUE}
@@ -159,7 +159,7 @@ plotExpression(sce, features=c( "Cldn5",
                                      "Vwf",
                                      "Flt1",
                                      "Mecom"),
-    x="originalexp_snn_res.0.3", colour_by = "originalexp_snn_res.0.3", ncol=1) +  scale_color_manual(values = cols)
+    x="originalexp_snn_res.0.4", colour_by = "originalexp_snn_res.0.4", ncol=1) +  scale_color_manual(values = cols)
 ```
 
 </details>
@@ -176,7 +176,7 @@ wrap_plots(list_plots) +  plot_annotation(title =  "Choroid plexus epithelial ce
 
 ```{r violin-epi, fig.height=3, cache=TRUE}
 plotExpression(sce, features=c("Ttr", "Kcnj13", "Krt18"),
-    x="originalexp_snn_res.0.3", colour_by = "originalexp_snn_res.0.3", ncol=1) +  scale_color_manual(values = cols)
+    x="originalexp_snn_res.0.4", colour_by = "originalexp_snn_res.0.4", ncol=1) +  scale_color_manual(values = cols)
 ```
 
 </details>
@@ -215,7 +215,7 @@ plotExpression(sce, features=c("Gja1",
                                     "Vim", 
                                     "Apoe", 
                                     "Fgfr3"),
-    x="originalexp_snn_res.0.3", colour_by = "originalexp_snn_res.0.3", ncol=1) +  scale_color_manual(values = cols)
+    x="originalexp_snn_res.0.4", colour_by = "originalexp_snn_res.0.4", ncol=1) +  scale_color_manual(values = cols)
 ```
 
 ```{r 3lines-feature-plots-2, cache=TRUE, fig.height=9, fig.width=9}
@@ -265,7 +265,7 @@ plotExpression(sce, features=c( "Cd74",
                                      "P2ry12",
                                      "C1qc",
                                      "C1qa"),
-    x="originalexp_snn_res.0.3", colour_by = "originalexp_snn_res.0.3", ncol=1) +  scale_color_manual(values = cols)
+    x="originalexp_snn_res.0.4", colour_by = "originalexp_snn_res.0.4", ncol=1) +  scale_color_manual(values = cols)
 ```
 
 ```{r  3-in-one-line, fig.height=4, cache=TRUE}
@@ -277,7 +277,7 @@ wrap_plots(list_plots) +  plot_annotation(title = "Border associated macrophages
 
 ```{r violin-bam, fig.height=3, cache=TRUE}
 plotExpression(sce, features=c( "Mrc1", "Ms4a7", "Apoe"),
-    x="originalexp_snn_res.0.3", colour_by = "originalexp_snn_res.0.3", ncol=1) +  scale_color_manual(values = cols)
+    x="originalexp_snn_res.0.4", colour_by = "originalexp_snn_res.0.4", ncol=1) +  scale_color_manual(values = cols)
 ```
 
 ```{r  two-lines, fig.height=8, cache=TRUE}
@@ -308,7 +308,7 @@ plotExpression(sce, features=c(
   "Klrb1c", "Cd209a", 
   # all immune cells (CD45)
   "Ptprc"),
-    x="originalexp_snn_res.0.3", colour_by = "originalexp_snn_res.0.3", ncol=1) +  scale_color_manual(values = cols)
+    x="originalexp_snn_res.0.4", colour_by = "originalexp_snn_res.0.4", ncol=1) +  scale_color_manual(values = cols)
 ```
 
 ```{r fig.height=4}
@@ -316,8 +316,8 @@ plotExpression(sce, features=c(
 list_plots <- lapply(c( 
   # monocytes
   "S100a9",
-  #neutrophils
-  "Ly6g", "Camp"),
+  #neutrophils # i deleted ly6g bcause not present
+   "Camp"),
             function(x)plotTSNE(sce, 
                                 colour_by = x ,
                                 point_alpha=0.3,
@@ -330,8 +330,8 @@ plotExpression(sce, features=c(
    # monocytes
   "S100a9",
   #neutrophils
-  "Ly6g", "Camp"),
-    x="originalexp_snn_res.0.3", colour_by = "originalexp_snn_res.0.3", ncol=1) +  scale_color_manual(values = cols)
+   "Camp"),
+    x="originalexp_snn_res.0.4", colour_by = "originalexp_snn_res.0.4", ncol=1) +  scale_color_manual(values = cols)
 ```
 
 </details>
@@ -366,7 +366,7 @@ plotExpression(sce, features=c("Pdgfra",
                                     "Pcdh15", 
                                     "Ptgds",
                                     "Bcan"),
-    x="originalexp_snn_res.0.3", colour_by = "originalexp_snn_res.0.3", ncol=1) +  scale_color_manual(values = cols)
+    x="originalexp_snn_res.0.4", colour_by = "originalexp_snn_res.0.4", ncol=1) +  scale_color_manual(values = cols)
 ```
 
 ```{r big-feature-plots5, cache=TRUE, fig.height=8}
@@ -391,7 +391,7 @@ plotExpression(sce, features=c("Plp1",
                                     "Mobp", 
                                     "Mbp", 
                                     "Sox10" ),
-    x="originalexp_snn_res.0.3", colour_by = "originalexp_snn_res.0.3", ncol=1) +  scale_color_manual(values = cols)
+    x="originalexp_snn_res.0.4", colour_by = "originalexp_snn_res.0.4", ncol=1) +  scale_color_manual(values = cols)
 ```
 
 </details>
@@ -415,18 +415,18 @@ In order to help with the identification of the different clusters we
 pull out the most expressed genes for each cluster.
 
 ```{r top_genes}
-if(!file.exists(here("outs", project, "top_genes_res0.3.tsv"))){
+if(!file.exists(here("outs", project, "top_genes_res0.4.tsv"))){
 # Create object where instead of cells in cols we have the clusters with counts aggregated
-summed_res0.3 <- aggregateAcrossCells(sce, id=colData(sce)[,c("originalexp_snn_res.0.3")])
+summed_res0.4 <- aggregateAcrossCells(sce, id=colData(sce)[,c("originalexp_snn_res.0.4")])
 
 # # Delete ribosomal and mitochondrial genes
-# is_ribo <- grepl("^Rp[sl]", rownames(summed_res0.3))
-# is_mito <- grepl("^mt-", rownames(summed_res0.3))
+# is_ribo <- grepl("^Rp[sl]", rownames(summed_res0.4))
+# is_mito <- grepl("^mt-", rownames(summed_res0.4))
 # keep <- !(is_ribo | is_mito)
-#  summed_res0.3 <- summed_res0.3[keep,]
+#  summed_res0.4 <- summed_res0.4[keep,]
  
 # for each column (aggregated counts) of the object extract the top genes
-top_genes_res0.3 <- apply(counts(summed_res0.3), 
+top_genes_res0.4 <- apply(counts(summed_res0.4), 
       MARGIN = 2,
       function(x){
         # get the gene names from the top 50 expressed genes
@@ -434,15 +434,15 @@ top_genes_res0.3 <- apply(counts(summed_res0.3),
         }
       )
 # save result
-write.table(top_genes_res0.3, file = here("outs", project, "top_genes_res0.3.tsv"), sep = "\t", quote = FALSE, col.names = TRUE, row.names = FALSE)
+write.table(top_genes_res0.4, file = here("outs", project, "top_genes_res0.4.tsv"), sep = "\t", quote = FALSE, col.names = TRUE, row.names = FALSE)
 }
 ```
 
 We compute here a pairwise differential expression between all the
 clusters. The results are saved in a list of dataframes,
-"markers_res0.3/markers_res0.3.RDS" one for each cluster. A .csv file
+"markers_res0.4/markers_res0.4.RDS" one for each cluster. A .csv file
 (that can be opened with a spreadsheet program) for each cluster is
-available in "markers_res0.3".
+available in "markers_res0.4".
 
 The default philosophy of findMarkers() is to identify a combination of
 marker genes that - together - uniquely define one cluster against the
@@ -458,14 +458,14 @@ contains the top 10 genes from each comparison.
 
 ```{r markers}
 # compute markers
-if(!file.exists(here("outs", project, "markers_res0.3", "markers_res0.3.RDS"))){
-  dir.create(here("outs", project, "markers_res0.3"))
-  markers <- findMarkers(sce, groups = sce$originalexp_snn_res.0.3, direction="up", lfc=1)
-  saveRDS(markers, here("outs", project,"markers_res0.3", "markers_res0.3.RDS"))
+if(!file.exists(here("outs", project, "markers_res0.4", "markers_res0.4.RDS"))){
+  dir.create(here("outs", project, "markers_res0.4"))
+  markers <- findMarkers(sce, groups = sce$originalexp_snn_res.0.4, direction="up", lfc=1)
+  saveRDS(markers, here("outs", project,"markers_res0.4", "markers_res0.4.RDS"))
   # save the top 100 genes for each one of the df
   lapply(names(markers), function(x){
     top_markers <- head(markers[[x]], 100)
-    write.csv(top_markers, here("outs", project, "markers_res0.3", paste0("top_markers_", x, "_res0.3.csv")), quote = FALSE)
+    write.csv(top_markers, here("outs", project, "markers_res0.4", paste0("top_markers_", x, "_res0.4.csv")), quote = FALSE)
     }
   )
 }
@@ -478,18 +478,18 @@ clusters and the top expressed genes the celltype identity of every
 cluster has been identified.
 
 ```{r}
-plotTSNE(sce, colour_by = "originalexp_snn_res.0.3", text_by = "originalexp_snn_res.0.3", force = 0) + scale_color_manual(values = cols)
+plotTSNE(sce, colour_by = "originalexp_snn_res.0.4", text_by = "originalexp_snn_res.0.4", force = 0) + scale_color_manual(values = cols)
 ```
 
 ```{r result}
 if (!file.exists(here("processed", project, "sce_anno_02.RDS"))) {
-annotation <- read.delim(here("data", "young_data_cluster_names_anno_02_res03.tsv"))
+annotation <- read.delim(here("data", "young_FIRE_mice_cluster_anno_02_res.0.4.tsv"))
 
 celltype <- annotation$Celltype
 clusters_named <- annotation$Cluster_name
 
-sce$celltype <- sce$originalexp_snn_res.0.3 
-sce$clusters_named <- sce$originalexp_snn_res.0.3
+sce$celltype <- sce$originalexp_snn_res.0.4 
+sce$clusters_named <- sce$originalexp_snn_res.0.4
 
 # add the celltypes as described above in the correct order to replace the levels.
 levels(sce$celltype) <- celltype
@@ -498,12 +498,13 @@ levels(sce$clusters_named) <- clusters_named
 
 # relevel to get the appropriate order in the plots
 sce$genotype <- relevel(factor(sce$genotype), "WT")
-# TODO put in the perfect order, for now just alphabetical
+
 sce$clusters_named <-
   factor(sce$clusters_named,
-    levels = c(
-      "Astrocyte_1", "Astrocyte_2", "Oligo-Astrocyte",  "Oligo_1", "Oligo_2", "OPC_1", "OPC-Astrocyte", "OPC-Oligo", "OPC_2", "iOligo", "mNeuron-Oligo", "mNeuron-OPC", "mNeuron_1", "mNeuron_2", "iNeuron&NRP", "Immune", "Microglia", "Oligo-Microglia", "Microglia-Astrocyte", "Microglia-iOligo", "Endothelial", "Mural_cells", "ChP_epithelia", "OEG"
-    )
+    levels = c("Astro_1", "Astro_2", "Astro_Oligo", "mOligo_1", "mOligo_2", "mOligo_3", 
+"mOligo_4", "iOligo", "OPC", "pOPC",   "mNeuron_ex",  
+ "mNeuron_in", "iNeurons_&_NRPs","Microglia", "Immune", "BAMs",
+"Mural_cells","Endothelial", "ChP_epithelia")
   )
 #alphabetical:         levels = clusters_named[order(clusters_named)])
 # 
@@ -517,7 +518,7 @@ sce$clusters_named <-
 plotTSNE(sce, colour_by = "clusters_named", text_by = "clusters_named", text_size = 3, force = 1) + scale_color_manual(values = cols)
 ```
 
-## Marker plots - before doublet filtering
+## Marker plots
 
 Exploring the shiny app and the DE between clusters specific markers for
 each one of the subtypes is identified.
@@ -527,7 +528,7 @@ each one of the subtypes is identified.
 <summary>Click to expand markers</summary>
 
 
-```{r final-violin, fig.height=25, fig.width=9, cache=TRUE}
+```{r final-violin, eval=FALSE, fig.height=25, fig.width=9, cache=TRUE, include=FALSE}
 annotation <- read.delim(here("data", "young_data_cluster_names_anno_02_res03.tsv"))
 
 annotation$Cluster_name <-
@@ -554,108 +555,13 @@ plotExpression(sce,
 
 ```
 
-</details>
-## Doublet filtering
-
-Some clusters highly express key markers from various combinations of
-two brain cell populations. We therefore rerun doublet finder to assess
-if they are doublets.
-
-We use the scDblFinder tool that consider every possible triplet of
-clusters consisting of a query cluster and two putative "source"
-clusters. Under the null hypothesis that the query consists of doublets
-from the two sources, it computes the number of genes (`num.de`) that
-are differentially expressed in the same direction in the query cluster
-compared to both of the source clusters. Such genes would be unique
-markers for the query cluster and provide evidence against the null
-hypothesis.
-
--    Clusters with the few unique genes (`num.de`) are more likely to be
-    composed of doublets.The library size ratio is also computed.
-
--    Potential doublets should also have larger library size than the
-    cells from the source clusters, resulting in `lib.size` ratios
-    bellow unity.
-
-```{r run-doublets, paged.print=TRUE}
-res_dbl <- findDoubletClusters(sce, sce$clusters_named)
-
-(res_dbl <- 
-res_dbl %>% 
-  as.data.frame() %>% 
-  rownames_to_column("cluster"))
-
-# see which clusters are clearly outliers in the number of DE genes.
-#res_dbl$cluster[isOutlier(res_dbl$num.de, type = "lower", log = T)]
-```
-
-The most obvious doublets are "mNeuron-OPC", "Microglia-iOligo",
-"mNeuron-Oligo" and "OPC-Oligo" With low `num.de` and both library size
-ratios bellow 1. 
-
-OPC-Oligo could seem to be a transitioning state, however they do express multiple markers usually found in late Oligodendrocytes. Microglia + Astrocytes or Oligos do have a library size
-larger than the microglia clusters, but not larger than the astrocyte or
-oligo population. These populations could be microglia pruning bits of
-astrocytes or oligodendrocytes, we do not keep these populations in the 
-downstream analysis. Finally, Astrocyte-OPC is the last cluster we decide to 
-delete, as there are known populations of Oligo-Astrocytes in the mouse brain, but 
-we are unsure about OPC-Astrocytes and prefer to be stricter with the filtering.
-
-<details>
-
-<summary>Note on Astrocyte-OPCs:</summary>
-
-We also tested keeping them and rerunning doublet finder,
-                      source1       source2 num.de median.de          best     p.value lib.size1 lib.size2        prop
-OPC-Astrocyte           OPC_1   Astrocyte_2    149    3603.0         Gnao1    7.180342e-83   0.6135593 0.4465331 0.005588435            
-Oligo-Astrocyte       Oligo_1   Astrocyte_1    254    3264.0       mt-Atp6    3.848991e-35   0.8738298 0.4604424 0.013932279
-OEG             ChP_epithelia   Astrocyte_2    623    2344.0           Npy    1.935603e-29   1.5961975 0.8223610 0.001940429
-[...]
-Code in commit 0b2c63cd from the github repo
-
-</details>
-
-```{r filter-doublets, paged.print=TRUE}
-if (!file.exists(here("processed", project, "sce_anno_nodbl_02.RDS"))) {
-  doublets <- c("mNeuron-OPC", "Microglia-iOligo", "mNeuron-Oligo", "OPC-Oligo", 
-"Microglia-Astrocyte", "Oligo-Microglia", "OPC-Astrocyte")
-  sce <- sce[, !(sce$clusters_named %in% doublets)]
-  sce$clusters_named <- droplevels(sce$clusters_named)
-             
-  
- saveRDS(sce, here("processed", project, "sce_nodbl_anno_02.RDS"))
-} else {
-  sce <- readRDS(here("processed", project, "sce_nodbl_anno_02.RDS"))
-}
 
 
-```
-```{r final-tsne, warning=FALSE}
+```{r final-tsne, eval=FALSE, warning=FALSE, include=FALSE}
 plotTSNE(sce, colour_by = "clusters_named", text_by = "clusters_named", text_size = 3, force = 1) + scale_color_manual(values = cols)
 ```
 
 
-## Markers
-
-```{r final-violin-nodbl, fig.height=25, fig.width=9, cache=TRUE}
-# dbl
-  doublets <- c("mNeuron-OPC", "Microglia-iOligo", "mNeuron-Oligo", "OPC-Oligo", 
-"Microglia-Astrocyte", "Oligo-Microglia", "OPC-Astrocyte")
-# create list of all markers ( cell level and subcluster level)
-annotation <- 
-  annotation %>% subset(!(Cluster_name %in% doublets))
-markers <- annotation$markers %>%
-  #divide the comma-separated markers as different markers
-  strsplit(",") %>% unlist() %>%
-  unique()
-
-plotExpression(sce,
-  features = markers,
-  x = "clusters_named", colour_by = "clusters_named", ncol = 1, scales = "free_y"
-) +
-  scale_color_manual(values = cols) + theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
-
-```
 
 ## Session Info
 
