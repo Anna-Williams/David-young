@@ -21,7 +21,7 @@ library(here) # reproducible paths
 ```{r load}
 source(here("src/colours.R"))
 project <- "fire-mice"
-sce <- readRDS(here("processed", project, "sce_nodbl_anno_02.RDS")) 
+sce <- readRDS(here("processed", project, "sce_anno_02.RDS")) 
 clusters_name <- "clusters_named"
 ```
 
@@ -138,6 +138,8 @@ write.csv(metadata(de_results_HET), here("outs", project,"DE_edgeR", "fail_contr
 # save fail
 write.csv(metadata(de_results_KO), here("outs", project,"DE_edgeR", "fail_contrast_DE_KO.csv"), row.names = FALSE)
 
+write.csv(metadata(de_results_KOvsHET), here("outs", project,"DE_edgeR", "fail_contrast_DE_KOvsHET.csv"), row.names = FALSE)
+
 ```
 
 ## Filter the results
@@ -160,8 +162,8 @@ de_results <- list(KO=de_results_KO, HET=de_results_HET, KOvsHET=de_results_KOvs
 cols <- list(KO=col_wt_het_ko[3], HET=col_wt_het_ko[2], WT=col_wt_het_ko[1])
 for(gnt in c("KO", "HET", "KOvsHET")){
   
-de_results <- de_results[[gnt]]
-is_de <- decideTestsPerLabel(de_results, threshold=0.05)
+de_results_gnt <- de_results[[gnt]]
+is_de <- decideTestsPerLabel(de_results_gnt, threshold=0.05)
 summary_de <- summarizeTestsPerLabel(is_de)
 
 # virtually 0 or NA we do not care, we want only + or -
@@ -176,19 +178,20 @@ write.csv(summary_de, here("outs", project,"DE_edgeR", paste0( "de_", gnt, "_fil
 write.csv(is_de_flt, here("outs", project, "DE_edgeR", paste0( "de_", gnt, "_filtered_genes.csv" )))
 
 
-# not plotting again. should control this by if statement but too lazy.
-# is_de_genes <- rownames(is_de_flt)
-# for( gene in is_de_genes){
-# pdf(file = here("outs", project, "DE_edgeR", "plots", paste0( "de_", gnt, "_filtered_plots", gene, ".pdf")))
-# plot <- plotExpression(logNormCounts(sce),
-#     features=gene,
-#     x="genotype", colour_by="genotype",
-#     other_fields="clusters_named") +
-#     facet_wrap(~clusters_named) +
-#     scale_color_manual(values = col_wt_het_ko) +
-#     ggtitle(gene)
-# print(plot)
-# dev.off()
+# plots
+dir.create(here("outs", project, "DE_edgeR", "plots", paste0( "de_", gnt, "_filtered_plots")))
+is_de_genes <- rownames(is_de_flt)
+for( gene in is_de_genes){
+pdf(file = here("outs", project, "DE_edgeR", "plots", paste0( "de_", gnt, "_filtered_plots"), paste0(gene, ".pdf")))
+plot <- plotExpression(logNormCounts(sce),
+    features=gene,
+    x="genotype", colour_by="genotype",
+    other_fields="clusters_named") +
+    facet_wrap(~clusters_named) +
+    scale_color_manual(values = col_wt_het_ko) +
+    ggtitle(gene)
+print(plot)
+dev.off()
 }
 
 }

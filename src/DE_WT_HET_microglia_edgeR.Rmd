@@ -21,7 +21,7 @@ library(here) # reproducible paths
 ```
 ```{r load}
 project <- "fire-mice"
-sce <- readRDS(here("processed", project, "sce_nodbl_anno_02.RDS")) 
+sce <- readRDS(here("processed", project, "sce_anno_02.RDS")) 
 ```
 
 ```{r paths}
