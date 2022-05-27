@@ -26,7 +26,7 @@ Milo vignette followed for this analyisis: [miloR](https://rawcdn.githack.com/Ma
 ```{r load}
 source(here("src/colours.R"))
 project <- "fire-mice"
-sce <- readRDS(here("processed", project, "sce_nodbl_anno_02.RDS")) 
+sce <- readRDS(here("processed", project, "sce_anno_02.RDS")) 
 ```
 
 # Differential abundance testing
@@ -181,7 +181,7 @@ While neighbourhoods tend to be homogeneous, we can define a threshold for `clus
 ggplot(da_results, aes(clusters_named_fraction)) + geom_histogram(bins=50)
 ```
 ```{r}
-da_results$clusters_named <- ifelse(da_results$clusters_named_fraction < 0.8, "Mixed", da_results$clusters_named)
+da_results$clusters_named <- ifelse(da_results$clusters_named_fraction < 0.5, "Mixed", da_results$clusters_named)
 ```
 
 Now we can visualize the distribution of DA Fold Changes in different cell types
