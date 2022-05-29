@@ -116,6 +116,10 @@ N.B. this step is the most time consuming of the analysis workflow and might tak
 milo <- calcNhoodDistance(milo, d=23, reduced.dim = "corrected")
 ```
 
+```{r}
+saveRDS(milo, here("processed", project, "milo.rds"))
+```
+
 ## Testing KO
 ```{r test-da}
 # we need to use the ~ 0 + Variable expression here so that we have all of the levels of our variable as separate columns in our model matrix
@@ -187,6 +191,83 @@ da_results$clusters_named <- ifelse(da_results$clusters_named_fraction < 0.5, "M
 Now we can visualize the distribution of DA Fold Changes in different cell types
 
 ```{r, fig.height=7, fig.width=7, dev="jpeg"}
+plotDAbeeswarm(da_results, group.by = "clusters_named")
+```
+
+
+## Testing WT vs HET
+
+
+```{r test-da}
+# we need to use the ~ 0 + Variable expression here so that we have all of the levels of our variable as separate columns in our model matrix
+da_results <- testNhoods(milo, design = ~ 0 + genotype, design.df = design, model.contrasts = contrastHET, reduced.dim = "corrected")
+table(da_results$SpatialFDR < 0.1)
+```
+This calculates a Fold-change and corrected P-value for each neighbourhood, which indicates whether there is significant differential abundance between developmental stages. The main statistics we consider here are: 
+
+- `logFC`: indicates the log-Fold change in cell numbers between samples from E7.5 and samples from E7.0
+- `PValue`: reports P-values before FDR correction
+- `SpatialFDR`: reports P-values corrected for multiple testing accounting for overlap between neighbourhoods
+
+```{r arrange}
+da_results %>%
+  arrange(SpatialFDR) %>%
+  head() 
+```
+
+
+# Inspecting DA testing results
+
+We can start inspecting the results of our DA analysis from a couple of standard diagnostic plots. 
+We first inspect the distribution of uncorrected P values, to verify that the test was balanced.
+
+```{r}
+ggplot(da_results, aes(PValue)) + geom_histogram(bins=50)
+```
+
+Then we visualize the test results with a volcano plot (remember that each point here represents a neighbourhood, _not_ a cell).
+
+```{r, dev="jpeg"}
+ggplot(da_results, aes(logFC, -log10(SpatialFDR))) + 
+  geom_point() +
+  geom_hline(yintercept = 1) ## Mark significance threshold (10% FDR)
+```
+
+
+To visualize DA results relating them to the embedding of single cells, we can build an abstracted graph of neighbourhoods that we can superimpose on the single-cell embedding. Here each node represents a neighbourhood, while edges indicate how many cells two neighbourhoods have in common. Here the layout of nodes is determined by the position of the index cell in the UMAP embedding of all single-cells. The neighbourhoods displaying significant DA are colored by their log-Fold Change.
+
+```{r, fig.width=15, fig.height=8, dev="jpeg"}
+milo <- buildNhoodGraph(milo)
+## Plot single-cell UMAP
+tsne_pl <- plotReducedDim(milo, dimred = "TSNE", colour_by="genotype", text_by = "celltype", 
+                          text_size = 3, point_size=0.5) +
+  guides(fill="none")
+## Plot neighbourhood graph
+nh_graph_pl <- plotNhoodGraphDA(milo, da_results, layout="TSNE",alpha=0.1) 
+  
+tsne_pl + nh_graph_pl +
+  plot_layout(guides="collect")
+```
+
+We might also be interested in visualizing whether DA is particularly evident in certain cell types. To do this, we assign a cell type label to each neighbourhood by finding the most abundant cell type within cells in each neighbourhood. We can label neighbourhoods in the results `data.frame` using the function `annotateNhoods`. This also saves the fraction of cells harbouring the label.
+
+```{r annotate}
+da_results <- annotateNhoods(milo, da_results, coldata_col = "clusters_named")
+head(da_results)
+```
+
+While neighbourhoods tend to be homogeneous, we can define a threshold for `clusters_named_fraction` to exclude neighbourhoods that are a mix of cell types. 
+
+```{r}
+ggplot(da_results, aes(clusters_named_fraction)) + geom_histogram(bins=50)
+```
+```{r}
+da_results$clusters_named <- ifelse(da_results$clusters_named_fraction < 0.5, "Mixed", da_results$clusters_named)
+```
+
+Now we can visualize the distribution of DA Fold Changes in different cell types
+
+```{r, fig.height=7, fig.width=7, dev="jpeg", eval=FALSE}
 plotDAbeeswarm(da_results, group.by = "clusters_named")
 ```
 
