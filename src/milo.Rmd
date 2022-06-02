@@ -96,7 +96,7 @@ For this section we refer back to the [contrast vignette](https://github.com/Mar
 The design matrix should match each sample to the experimental condition of interest for DA testing. We also include the `sequencing.batch` column in the design matrix. This represents a known technical covariate that we want to account for in DA testing. 
 
 ```{r}
-design <- data.frame(colData(milo))[,c("Sample", "genotype", "batch")]
+design <- data.frame(colData(milo))[,c("Sample", "batch", "genotype")]
 design$batch <- as.factor(design$batch)
 design <- distinct(design)
 rownames(design) <- design$Sample
@@ -123,7 +123,7 @@ saveRDS(milo, here("processed", project, "milo.rds"))
 ## Testing KO
 ```{r test-da}
 # we need to use the ~ 0 + Variable expression here so that we have all of the levels of our variable as separate columns in our model matrix
-da_results <- testNhoods(milo, design = ~ 0 + genotype, design.df = design, model.contrasts = contrastKO, reduced.dim = "corrected")
+da_result <- testNhoods(milo, design = ~ 0  + genotype + batch, design.df = design, model.contrasts = contrastKO, reduced.dim = "corrected")
 table(da_results$SpatialFDR < 0.1)
 ```
 This calculates a Fold-change and corrected P-value for each neighbourhood, which indicates whether there is significant differential abundance between developmental stages. The main statistics we consider here are: 
@@ -200,7 +200,7 @@ plotDAbeeswarm(da_results, group.by = "clusters_named")
 
 ```{r test-da}
 # we need to use the ~ 0 + Variable expression here so that we have all of the levels of our variable as separate columns in our model matrix
-da_results <- testNhoods(milo, design = ~ 0 + genotype, design.df = design, model.contrasts = contrastHET, reduced.dim = "corrected")
+da_results <- testNhoods(milo, design = ~ 0  + genotype + batch, design.df = design, model.contrasts = contrastHET, reduced.dim = "corrected")
 table(da_results$SpatialFDR < 0.1)
 ```
 This calculates a Fold-change and corrected P-value for each neighbourhood, which indicates whether there is significant differential abundance between developmental stages. The main statistics we consider here are: 
