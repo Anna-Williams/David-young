@@ -145,7 +145,7 @@ We can start inspecting the results of our DA analysis from a couple of standard
 We first inspect the distribution of uncorrected P values, to verify that the test was balanced.
 
 ```{r}
-ggplot(da_results, aes(PValue)) + geom_histogram(bins=50)
+ggplot(da_results, aes(PValue)) + geom_histogram(bins=50) + ggtitle(contrastKO)
 ```
 
 Then we visualize the test results with a volcano plot (remember that each point here represents a neighbourhood, _not_ a cell).
@@ -195,8 +195,7 @@ plotDAbeeswarm(da_results, group.by = "clusters_named")
 ```
 
 
-## Testing WT vs HET
-
+## Testing HET vs WT
 
 ```{r test-da}
 # we need to use the ~ 0 + Variable expression here so that we have all of the levels of our variable as separate columns in our model matrix
@@ -222,8 +221,25 @@ We can start inspecting the results of our DA analysis from a couple of standard
 We first inspect the distribution of uncorrected P values, to verify that the test was balanced.
 
 ```{r}
-ggplot(da_results, aes(PValue)) + geom_histogram(bins=50)
+ggplot(da_results, aes(PValue)) + geom_histogram(bins=50) + scale_y_continuous(limits = c(0,700)) + ggtitle(contrastHET) 
 ```
+
+
+#### Test the other way arround
+We observe all are NS, with a slightly conservative tendency. Is this due to not correct design?  test WTvsHET to compare.
+```{r test-da-het}
+# we need to use the ~ 0 + Variable expression here so that we have all of the levels of our variable as separate columns in our model matrix
+da_results_rev <- testNhoods(milo, design = ~ 0 + genotype, design.df = design, model.contrasts = "genotypeWT - genotypeHET", reduced.dim = "corrected")
+table(da_results$SpatialFDR < 0.1)
+```
+
+```{r}
+ggplot(da_results_rev, aes(PValue)) + geom_histogram(bins=50) + ggtitle("genotypeWT - genotypeHET") + scale_y_continuous(limits = c(0,700)) + abline(y=100)
+```
+
+The same pattern is still observed. 
+
+# Visualise the results (HETvsWT)
 
 Then we visualize the test results with a volcano plot (remember that each point here represents a neighbourhood, _not_ a cell).
 
@@ -251,7 +267,7 @@ tsne_pl + nh_graph_pl +
 
 We might also be interested in visualizing whether DA is particularly evident in certain cell types. To do this, we assign a cell type label to each neighbourhood by finding the most abundant cell type within cells in each neighbourhood. We can label neighbourhoods in the results `data.frame` using the function `annotateNhoods`. This also saves the fraction of cells harbouring the label.
 
-```{r annotate}
+```{r annotate-het}
 da_results <- annotateNhoods(milo, da_results, coldata_col = "clusters_named")
 head(da_results)
 ```
@@ -280,4 +296,18 @@ sessionInfo()
 
 </details>
 
+
+Additional p-value plots
+
+
+
+```{r}
+da_results <- testNhoods(milo, design = ~ 0  + genotype + batch, design.df = design, model.contrasts = contrastHET, reduced.dim = "corrected")
+
+het <- ggplot(da_results, aes(PValue)) + geom_histogram(bins=100) + scale_y_continuous(limits = c(0,700)) + ggtitle(contrastHET) + geom_abline(intercept=dim((da_results))[1]/100)
+da_results_ko <- testNhoods(milo, design = ~ 0  + genotype + batch, design.df = design, model.contrasts = contrastKO, reduced.dim = "corrected")
+ko <- ggplot(da_results_ko, aes(PValue)) + geom_histogram(bins=100) + ggtitle(contrastKO) + geom_abline(intercept=dim((da_results))[1]/100)
+gridExtra::grid.arrange(het,ko)
+
+```
 
