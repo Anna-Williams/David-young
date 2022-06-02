@@ -239,6 +239,19 @@ ggplot(da_results_rev, aes(PValue)) + geom_histogram(bins=50) + ggtitle("genotyp
 
 The same pattern is still observed. 
 
+### how about removing nhoods that are only in KO?
+
+```{r}
+source(here("src/subset_milo_het.R"))
+# we need to use the ~ 0 + Variable expression here so that we have all of the levels of our variable as separate columns in our model matrix
+#da_results_het <- testNhoods(milo_het, design = ~ 0 + genotype + batch, design.df = design_het, model.contrasts = "genotypeHET - genotypeWT", reduced.dim = "corrected")
+table(da_results$SpatialFDR < 0.1)
+ggplot(da_results_het, aes(PValue)) + geom_histogram(bins=50) + ggtitle("genotypeWT - genotypeHET") + scale_y_continuous(limits = c(0,700)) + geom_abline(intercept=dim((da_results_het))[1]/50)
+```
+
+
+
+
 # Visualise the results (HETvsWT)
 
 Then we visualize the test results with a volcano plot (remember that each point here represents a neighbourhood, _not_ a cell).
