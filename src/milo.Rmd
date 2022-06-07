@@ -20,6 +20,7 @@ library(here) # reproducible paths
 library(miloR) # DA abundance package
 library(dplyr) # distinct
 library(patchwork) #plots
+library(dplyr)
 ```
 Milo vignette followed for this analyisis: [miloR](https://rawcdn.githack.com/MarioniLab/miloR/7c7f906b94a73e62e36e095ddb3e3567b414144e/vignettes/milo_gastrulation.html)
 
@@ -28,6 +29,8 @@ source(here("src/colours.R"))
 project <- "fire-mice"
 sce <- readRDS(here("processed", project, "sce_anno_02.RDS")) 
 ```
+
+
 
 # Differential abundance testing
 
@@ -281,8 +284,8 @@ tsne_pl + nh_graph_pl +
 We might also be interested in visualizing whether DA is particularly evident in certain cell types. To do this, we assign a cell type label to each neighbourhood by finding the most abundant cell type within cells in each neighbourhood. We can label neighbourhoods in the results `data.frame` using the function `annotateNhoods`. This also saves the fraction of cells harbouring the label.
 
 ```{r annotate-het}
-da_results <- annotateNhoods(milo, da_results, coldata_col = "clusters_named")
-head(da_results)
+da_results_het <- annotateNhoods(milo_het, da_results_het, coldata_col = "clusters_named")
+head(da_results_het)
 ```
 
 While neighbourhoods tend to be homogeneous, we can define a threshold for `clusters_named_fraction` to exclude neighbourhoods that are a mix of cell types. 
@@ -297,7 +300,9 @@ da_results$clusters_named <- ifelse(da_results$clusters_named_fraction < 0.5, "M
 Now we can visualize the distribution of DA Fold Changes in different cell types
 
 ```{r, fig.height=7, fig.width=7, dev="jpeg", eval=FALSE}
-plotDAbeeswarm(da_results, group.by = "clusters_named")
+plotDAbeeswarm(da_results_het, group.by = "clusters_named")
+```
+
 Modifications
 ```{r}
 #plotDAbeeswarm_mod <- function(da.res, group.by=NULL, alpha=0.1, subset.nhoods=NULL){
@@ -364,9 +369,10 @@ Additional p-value plots
 ```{r}
 da_results <- testNhoods(milo, design = ~ 0  + genotype + batch, design.df = design, model.contrasts = contrastHET, reduced.dim = "corrected")
 
-het <- ggplot(da_results, aes(PValue)) + geom_histogram(bins=100) + scale_y_continuous(limits = c(0,700)) + ggtitle(contrastHET) + geom_abline(intercept=dim((da_results))[1]/100)
+het <- ggplot(da_results_het, aes(PValue)) + geom_histogram(bins=50) + scale_y_continuous(limits = c(0,700)) + ggtitle(contrastHET) + geom_abline(intercept=dim((da_results_het))[1]/50)
 da_results_ko <- testNhoods(milo, design = ~ 0  + genotype + batch, design.df = design, model.contrasts = contrastKO, reduced.dim = "corrected")
-ko <- ggplot(da_results_ko, aes(PValue)) + geom_histogram(bins=100) + ggtitle(contrastKO) + geom_abline(intercept=dim((da_results))[1]/100)
+ko <- ggplot(da_results_ko, aes(PValue)) + geom_histogram(bins=50) + ggtitle(contrastKO) + geom_abline(intercept=dim((da_results))[1]/50)
+ggplot(da_results_het, aes(PValue)) + geom_histogram(bins=500) + ggtitle(contrastHET) + geom_abline(intercept=dim((da_results_het))[1]/500)
 gridExtra::grid.arrange(het,ko)
 
 ```
