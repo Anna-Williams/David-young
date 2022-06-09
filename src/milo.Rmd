@@ -238,6 +238,12 @@ contrastHET <- c("genotypeHET - genotypeWT")
 ```{r long-step_het}
 milo_het <- calcNhoodDistance(milo_het, d=23, reduced.dim = "corrected")
 ```
+
+
+```{r save-het}
+saveRDS(milo_het, here("processed", project, "milo_ko.rds"))
+```
+
 ```{r}
 da_results_het <- testNhoods(milo_het, design = ~ 0 + genotype + batch, design.df = design_het, model.contrasts = "genotypeHET - genotypeWT", reduced.dim = "corrected")
 ```
@@ -301,7 +307,6 @@ Now we can visualize the distribution of DA Fold Changes in different cell types
 plotDAbeeswarm(da_results_het, group.by = "clusters_named")
 ```
 
-Modifications
 ```{r}
 #plotDAbeeswarm_mod <- function(da.res, group.by=NULL, alpha=0.1, subset.nhoods=NULL){
 da.res <- da_results_het
