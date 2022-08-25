@@ -58,4 +58,4 @@ contrastHET <- c("genotypeHET - genotypeWT")
 #```{r long-step}
 milo_het <- calcNhoodDistance(milo_het, d=23, reduced.dim = "corrected")
 #```
-da_results_het <- testNhoods(milo_het, design = ~ 0 + genotype, design.df = design_het, model.contrasts = "genotypeHET - genotypeWT", reduced.dim = "corrected")
+da_results_het <- testNhoods(milo_het, design = ~ 0 + genotype + batch, design.df = design_het, model.contrasts = "genotypeHET - genotypeWT", reduced.dim = "corrected")
