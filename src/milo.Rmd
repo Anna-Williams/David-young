@@ -241,7 +241,7 @@ milo_het <- calcNhoodDistance(milo_het, d=23, reduced.dim = "corrected")
 
 
 ```{r save-het}
-saveRDS(milo_het, here("processed", project, "milo_ko.rds"))
+saveRDS(milo_het, here("processed", project, "milo_het.rds"))
 ```
 
 ```{r}
