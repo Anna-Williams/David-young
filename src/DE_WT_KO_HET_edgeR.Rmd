@@ -17,6 +17,8 @@ library(scran) # for scDE
 library(scater) # for aggregate counts
 library(edgeR) #for De
 library(here) # reproducible paths
+library(DropletUtils) # ambient RNA
+library(scuttle) # modify gene names
 ```
 ```{r load}
 source(here("src/colours.R"))
@@ -142,6 +144,51 @@ write.csv(metadata(de_results_KOvsHET), here("outs", project,"DE_edgeR", "fail_c
 
 ```
 
+## Filter ambient RNA background
+
+Extracellular RNA (most commonly released upon cell lysis) is captured along with each cell in its reaction chamber, contributing counts to genes that are not otherwise expressed in that cell. This is problematic for DE analyses between conditions, as DEGs detected for a particular cell type may be driven by differences in the ambient profiles rather than any intrinsic change in gene regulation. Here he observed microglia genes are shown as down regulated in cell types were their expression is not expected (such as oligodendrocytes and astrocytes).
+We will use these known genes as previous knowledge to build an ambient model and remove it from the DE. 
+
+The list of microglia genes used are in top 100 of middle-aged microglia markers and significantly down in at least one cluster in young and/or middle-aged datasets.
+
+```{r background}
+
+# to calculate the ambient the raw data should be used
+samples <- dir(here("data/raw/"))
+# create empty vector to hold ambient
+ambient <- vector("list", length(samples))
+names(ambient) <- samples
+# generate profile for each sample
+for(sample in samples){
+  matrix <- here("data/raw/", sample, "raw_feature_bc_matrix")
+  sce_sample <- read10xCounts(matrix, sample, version = "auto", col.names = TRUE)
+  # calculate ambient counts, with good turning FALSE because we will use the counts for further estimations and round false because we already have integers. 
+  ambient[[sample]] <- ambientProfileEmpty(counts(sce_sample), good.turing = FALSE, round = FALSE)
+}
+
+# clean up ambient output
+ambient <-  do.call(cbind, ambient)
+
+# use symbol nomenclature
+rownames(ambient) <- uniquifyFeatureNames(
+    ID=rowData(sce_sample)$ID,
+    names=rowData(sce_sample)$Symbol
+)
+
+# maximum proportion for each gene that could be due to ambient
+# TODO, I need here to sort out the ambient vecotr, so I can do the 19 clusters at once, repeating n (often 12) times
+# the ambient profile. the ambient profile needs to be calculated on groups of cells that are similar: We'll use 
+# the clusters we run the DEG on, like this it can be added to each of these. It also needs to run per sample (obviously you don't calculate the ambient with another sample), but we can take for each gene the avareage of the proportion obtained in each sample
+
+# create an aggregate ambient, duplicating the information to match the format of summed
+n=0
+aggregate_ambient <- matrix(nrow = nrow(ambient), ncol=ncol(summed))
+for( sample in summed$Sample){
+  n = n+1
+  aggregate_ambient[,n] <-  ambient[,sample]
+}
+```
+
 ## Filter the results
 
 For each one of the labels a list is produced with the DE genes at a FDR of 5%. Summaries of these results are saved in /outs/`r project`/DE_edgeR/ 
@@ -152,10 +199,6 @@ Genes listed as NA were either filtered out as low-abundance genes for a given l
 de_filtered_genecounts.csv contains a small summary with the number of genes DE for each one of the clusters. 
 
 de_filtered_genes.csv contains the list of genes DE. 
-
-## Plot the results
-
-Saved in /outs/`r project`/DE_edgeR/de_filtered_plots
 
 ```{r filter-de, eval=FALSE}
 de_results <- list(KO=de_results_KO, HET=de_results_HET, KOvsHET=de_results_KOvsHET)
@@ -176,8 +219,15 @@ write.csv(summary_de, here("outs", project,"DE_edgeR", paste0( "de_", gnt, "_fil
 
 
 write.csv(is_de_flt, here("outs", project, "DE_edgeR", paste0( "de_", gnt, "_filtered_genes.csv" )))
+```
 
 
+## Plot the results
+
+Saved in /outs/`r project`/DE_edgeR/de_filtered_plots
+
+
+```{r plot, eval=FALSE}
 # plots
 dir.create(here("outs", project, "DE_edgeR", "plots", paste0( "de_", gnt, "_filtered_plots")))
 is_de_genes <- rownames(is_de_flt)
