@@ -195,6 +195,9 @@ aggregate_ambient <- aggregate_ambient[row.names(summed_filt),]
 
 # upper bound of gene contribution from ambient contamination
 max_ambient <- ambientContribMaximum(counts(summed_filt), ambient= aggregate_ambient, mode = "proportion")
+
+# mean of result obtained between all samples for each cluster
+#rowMeans(max_ambient[,summed_filt$clusters_named=="Astro_1"], na.rm = TRUE)
 ```
 
 ## Filter the results
