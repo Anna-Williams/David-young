@@ -219,6 +219,7 @@ write.csv(summary_de, here("outs", project,"DE_edgeR", paste0( "de_", gnt, "_fil
 
 
 write.csv(is_de_flt, here("outs", project, "DE_edgeR", paste0( "de_", gnt, "_filtered_genes.csv" )))
+}
 ```
 
 
@@ -228,6 +229,10 @@ Saved in /outs/`r project`/DE_edgeR/de_filtered_plots
 
 
 ```{r plot, eval=FALSE}
+for(gnt in c("KO", "HET", "KOvsHET")){
+# read the filtered table
+ is_de_flt <-  read.csv(here("outs", project, "DE_edgeR", paste0( "de_", gnt, "_filtered_genes.csv" ))
+  
 # plots
 dir.create(here("outs", project, "DE_edgeR", "plots", paste0( "de_", gnt, "_filtered_plots")))
 is_de_genes <- rownames(is_de_flt)
