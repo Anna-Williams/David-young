@@ -178,15 +178,23 @@ rownames(ambient) <- uniquifyFeatureNames(
 # maximum proportion for each gene that could be due to ambient
 # TODO, I need here to sort out the ambient vecotr, so I can do the 19 clusters at once, repeating n (often 12) times
 # the ambient profile. the ambient profile needs to be calculated on groups of cells that are similar: We'll use 
-# the clusters we run the DEG on, like this it can be added to each of these. It also needs to run per sample (obviously you don't calculate the ambient with another sample), but we can take for each gene the avareage of the proportion obtained in each sample
+# the clusters we run the DEG on, like this it can be added to each of these. It also needs to run per sample (obviously you don't calculate the ambient with another sample), but we can take for each gene the avareage of the proportion obtained in each sample. For this again we will need to sort out the fact I'm doing this for all clusters at once, as we only want to average for each cluster. 
 
-# create an aggregate ambient, duplicating the information to match the format of summed
+# create an aggregate ambient, duplicating the information to match the format of the summed sce
 n=0
-aggregate_ambient <- matrix(nrow = nrow(ambient), ncol=ncol(summed))
-for( sample in summed$Sample){
+aggregate_ambient <- matrix(nrow = nrow(ambient), ncol=ncol(summed_filt))
+for( sample in summed_filt$Sample){
   n = n+1
   aggregate_ambient[,n] <-  ambient[,sample]
 }
+# add the gene names again
+rownames(aggregate_ambient) <- rownames(ambient)
+
+# subset for same genes as in the summed sce
+aggregate_ambient <- aggregate_ambient[row.names(summed_filt),]
+
+# upper bound of gene contribution from ambient contamination
+max_ambient <- ambientContribMaximum(counts(summed_filt), ambient= aggregate_ambient, mode = "proportion")
 ```
 
 ## Filter the results
