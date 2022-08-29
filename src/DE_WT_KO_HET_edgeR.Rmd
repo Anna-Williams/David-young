@@ -35,7 +35,7 @@ We perform the DE analysis separately for each label to identify cell type-speci
 ```{r sum}
 # each column represents unique combination for each cluster and each sample replicate
 summed <- aggregateAcrossCells(sce, 
-    id=colData(sce)[,c(clusters_name, "Sample")]) 
+                               id=colData(sce)[,c(clusters_name, "Sample")]) 
 summed
 ```
 
@@ -85,63 +85,55 @@ FDR (False discovery rate) is the PValue after Benjamini-Hochberg correction.  F
 
 If the comparison was not possible for a particular cluster, most commonly due to lack of residual degrees of freedom ( e.g. an absence of enough samples from both conditions) it is listed in /outs/`r project`/DE_edgeR/fail_min_cells_DE.csv
 
-```{r de, eval=FALSE}
+```{r de, eval=TRUE}
 # Reordering the genotype factor, treated should be second level
 summed_filt$genotype <- factor(summed_filt$genotype, levels = c("WT", "HET", "KO"))
 
 # KO ones
 # run de
 de_results_KO <- pseudoBulkDGE(summed_filt, 
-    label=summed_filt$clusters_named,
-    design= design,
-    coef="genotypeKO",
-    condition=summed_filt$genotype 
+                               label=summed_filt$clusters_named,
+                               design= design,
+                               coef="genotypeKO",
+                               condition=summed_filt$genotype 
 )
 
 # HET ones
 de_results_HET <- pseudoBulkDGE(summed_filt, 
-    label=summed_filt$clusters_named,
-    design= design,
-    coef="genotypeHET",
-    condition=summed_filt$genotype 
+                                label=summed_filt$clusters_named,
+                                design= design,
+                                coef="genotypeHET",
+                                condition=summed_filt$genotype 
 )
 # KOvsHET ones
 de_results_KOvsHET <- pseudoBulkDGE(summed_filt, 
-    label=summed_filt$clusters_named,
-    design= design_KOvsHET,
-    contrast=c("genotypeKO - genotypeHET"),
-    condition=summed_filt$genotype 
+                                    label=summed_filt$clusters_named,
+                                    design= design_KOvsHET,
+                                    contrast=c("genotypeKO - genotypeHET"),
+                                    condition=summed_filt$genotype 
 )
-# save result objects
-saveRDS(de_results_HET, here("processed",project, "DE_results_edgeR_HET.RDS"))
-saveRDS(de_results_KO, here("processed",project, "DE_results_edgeR_KO.RDS"))
-saveRDS(de_results_KOvsHET, here("processed",project, "DE_results_edgeR_KOvsHET.RDS"))
 
-# save results DE tables
-lapply(names(de_results_KO), function(x){
-  de_results_clu <- de_results_KO[[x]]
-  write.csv(de_results_clu, here("outs", project, "DE_edgeR", "de_results_KO", paste0("de_results_KO_", x, ".csv")), quote = FALSE)
+
+# create a list to loop through the 3 de_results
+de_results <- list(KO=de_results_KO, HET=de_results_HET, KOvsHET=de_results_KOvsHET)
+for(gnt in c("KO", "HET", "KOvsHET")){
+  
+  #extract each table
+  de_results_gnt <- de_results[[gnt]]
+  
+  #save R objects
+  saveRDS(de_results_HET, here("processed",project, paste0("DE_results_edgeR_", gnt, ".RDS")))
+  
+  # save results DE tables
+  lapply(names(de_results_gnt), function(cluster){
+    de_results_clu <- de_results_gnt[[cluster]]
+    write.csv(de_results_clu, here("outs", project, "DE_edgeR", paste0("de_results_", gnt), paste0("de_results_", gnt, "_", cluster, ".csv")), quote = FALSE)
+  }
+  )
+  # save failed
+  write.csv(metadata(de_results_HET), here("outs", project,"DE_edgeR", paste0("fail_contrast_DE_",gnt,".csv")), row.names = FALSE)
+            
 }
-)
-lapply(names(de_results_KOvsHET), function(x){
-  de_results_clu <- de_results_KOvsHET[[x]]
-  write.csv(de_results_clu, here("outs", project, "DE_edgeR", "de_results_KOvsHET", paste0("de_results_KOvsHET_", x, ".csv")), quote = FALSE)
-}
-)
-lapply(names(de_results_HET), function(x){
-  de_results_clu <- de_results_HET[[x]]
-  write.csv(de_results_clu, here("outs", project, "DE_edgeR", "de_results_HET", paste0("de_results_HET_", x, ".csv")), quote = FALSE)
-}
-)
-
-# save fail
-write.csv(metadata(de_results_HET), here("outs", project,"DE_edgeR", "fail_contrast_DE_HET.csv"), row.names = FALSE)
-
-# save fail
-write.csv(metadata(de_results_KO), here("outs", project,"DE_edgeR", "fail_contrast_DE_KO.csv"), row.names = FALSE)
-
-write.csv(metadata(de_results_KOvsHET), here("outs", project,"DE_edgeR", "fail_contrast_DE_KOvsHET.csv"), row.names = FALSE)
-
 ```
 
 ## Filter ambient RNA background
@@ -151,7 +143,7 @@ We will use these known genes as previous knowledge to build an ambient model an
 
 The list of microglia genes used are in top 100 of middle-aged microglia markers and significantly down in at least one cluster in young and/or middle-aged datasets.
 
-```{r background}
+```{r background, eval=FALSE}
 
 # to calculate the ambient the raw data should be used
 samples <- dir(here("data/raw/"))
@@ -171,8 +163,8 @@ ambient <-  do.call(cbind, ambient)
 
 # use symbol nomenclature
 rownames(ambient) <- uniquifyFeatureNames(
-    ID=rowData(sce_sample)$ID,
-    names=rowData(sce_sample)$Symbol
+  ID=rowData(sce_sample)$ID,
+  names=rowData(sce_sample)$Symbol
 )
 
 # maximum proportion for each gene that could be due to ambient
@@ -216,20 +208,20 @@ de_results <- list(KO=de_results_KO, HET=de_results_HET, KOvsHET=de_results_KOvs
 cols <- list(KO=col_wt_het_ko[3], HET=col_wt_het_ko[2], WT=col_wt_het_ko[1])
 for(gnt in c("KO", "HET", "KOvsHET")){
   
-de_results_gnt <- de_results[[gnt]]
-is_de <- decideTestsPerLabel(de_results_gnt, threshold=0.05)
-summary_de <- summarizeTestsPerLabel(is_de)
-
-# virtually 0 or NA we do not care, we want only + or -
-is_de_0 <- is_de
-is_de_0[is.na(is_de_0)]<- 0
-# but filter the original object to get them back
-is_de_flt <- is_de[(rowSums(abs(is_de_0)) != 0), ]
-
-write.csv(summary_de, here("outs", project,"DE_edgeR", paste0( "de_", gnt, "_filtered_genecounts.csv")))
-
-
-write.csv(is_de_flt, here("outs", project, "DE_edgeR", paste0( "de_", gnt, "_filtered_genes.csv" )))
+  de_results_gnt <- de_results[[gnt]]
+  is_de <- decideTestsPerLabel(de_results_gnt, threshold=0.05)
+  summary_de <- summarizeTestsPerLabel(is_de)
+  
+  # virtually 0 or NA we do not care, we want only + or -
+  is_de_0 <- is_de
+  is_de_0[is.na(is_de_0)]<- 0
+  # but filter the original object to get them back
+  is_de_flt <- is_de[(rowSums(abs(is_de_0)) != 0), ]
+  
+  write.csv(summary_de, here("outs", project,"DE_edgeR", paste0( "de_", gnt, "_filtered_genecounts.csv")))
+  
+  
+  write.csv(is_de_flt, here("outs", project, "DE_edgeR", paste0( "de_", gnt, "_filtered_genes.csv" )))
 }
 ```
 
@@ -241,31 +233,31 @@ Saved in /outs/`r project`/DE_edgeR/de_filtered_plots
 
 ```{r plot, eval=FALSE}
 for(gnt in c("KO", "HET", "KOvsHET")){
-# read the filtered table
- is_de_flt <-  read.csv(here("outs", project, "DE_edgeR", paste0( "de_", gnt, "_filtered_genes.csv" ))
-  
-# plots
-dir.create(here("outs", project, "DE_edgeR", "plots", paste0( "de_", gnt, "_filtered_plots")))
-is_de_genes <- rownames(is_de_flt)
-for( gene in is_de_genes){
-pdf(file = here("outs", project, "DE_edgeR", "plots", paste0( "de_", gnt, "_filtered_plots"), paste0(gene, ".pdf")))
-plot <- plotExpression(logNormCounts(sce),
-    features=gene,
-    x="genotype", colour_by="genotype",
-    other_fields="clusters_named") +
-    facet_wrap(~clusters_named) +
-    scale_color_manual(values = col_wt_het_ko) +
-    ggtitle(gene)
-print(plot)
-dev.off()
-}
-
+  # read the filtered table
+  is_de_flt <-  read.csv(here("outs", project, "DE_edgeR", paste0( "de_", gnt, "_filtered_genes.csv" ))
+                         
+                         # plots
+                         dir.create(here("outs", project, "DE_edgeR", "plots", paste0( "de_", gnt, "_filtered_plots")))
+                         is_de_genes <- rownames(is_de_flt)
+                         for( gene in is_de_genes){
+                           pdf(file = here("outs", project, "DE_edgeR", "plots", paste0( "de_", gnt, "_filtered_plots"), paste0(gene, ".pdf")))
+                           plot <- plotExpression(logNormCounts(sce),
+                                                  features=gene,
+                                                  x="genotype", colour_by="genotype",
+                                                  other_fields="clusters_named") +
+                             facet_wrap(~clusters_named) +
+                             scale_color_manual(values = col_wt_het_ko) +
+                             ggtitle(gene)
+                           print(plot)
+                           dev.off()
+                         }
+                         
 }
 ```
 
 <details>
-  <summary>**Session Info**</summary>
-  
+<summary>**Session Info**</summary>
+
 ```{r}
 sessionInfo()
 ```
