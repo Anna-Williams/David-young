@@ -148,7 +148,7 @@ rownames(ambient) <- uniquifyFeatureNames(
 )
 
 # maximum proportion for each gene that could be due to ambient
-# TODO, I need here to sort out the ambient vecotr, so I can do the 19 clusters at once, repeating n (often 12) times
+# I need here to sort out the ambient vecotr, so I can do the 19 clusters at once, repeating n (often 12) times
 # the ambient profile. the ambient profile needs to be calculated on groups of cells that are similar: We'll use 
 # the clusters we run the DEG on, like this it can be added to each of these. It also needs to run per sample (obviously you don't calculate the ambient with another sample), but we can take for each gene the avareage of the proportion obtained in each sample. For this again we will need to sort out the fact I'm doing this for all clusters at once, as we only want to average for each cluster. 
 
@@ -168,8 +168,22 @@ aggregate_ambient <- aggregate_ambient[row.names(summed_filt),]
 # upper bound of gene contribution from ambient contamination
 max_ambient <- ambientContribMaximum(counts(summed_filt), ambient= aggregate_ambient, mode = "proportion")
 
-# mean of result obtained between all samples for each cluster
-#rowMeans(max_ambient[,summed_filt$clusters_named=="Astro_1"], na.rm = TRUE)
+# mean of result obtained between all samples -> needs to be done for each cluster
+# create a list to loop through the 3 de_results
+de_results <- list(KO=de_results_KO, HET=de_results_HET, KOvsHET=de_results_KOvsHET)
+for (gnt in c("KO", "HET", "KOvsHET")) {
+    #extract each genotype dataframe list
+  de_results_gnt <- de_results[[gnt]]
+  
+  # add to the list of dataframes with results for each cluster the ambient info
+  de_result_gnt_ambient <- lapply(names(de_results_gnt), function(cluster) {
+    de_results_clu <- de_results_gnt[[cluster]]
+    # calculate mean of all samples for that cluster
+    cluster_max_ambient <- rowMeans(max_ambient[, summed_filt$clusters_named == cluster], na.rm = TRUE)
+    # combine with previous dataframe
+    cbind(de_results_clu, maxAmbient = cluster_max_ambient)
+  })
+}
 ```
 
 ## Save, filter and summarised the results
@@ -184,18 +198,18 @@ de_filtered_genecounts.csv contains a small summary with the number of genes DE 
 de_filtered_genes.csv contains the list of genes DE. 
 
 ```{r save-de, eval=TRUE, warning=FALSE}
-## SAVE per cluster and ADD BACKGROUND data
+## SAVE per cluster 
 
-# create a list to loop through the 3 de_results
-de_results <- list(KO=de_results_KO, HET=de_results_HET, KOvsHET=de_results_KOvsHET)
 for(gnt in c("KO", "HET", "KOvsHET")){
   
   #extract each table
   de_results_gnt <- de_results[[gnt]]
   
+  
   #save R objects
   dir.create(here("processed",project), showWarnings = FALSE)
-  saveRDS(de_results_HET, here("processed",project, paste0("DE_results_edgeR_", gnt, ".RDS")))
+  saveRDS(de_results_gnt, here("processed",project, paste0("DE_results_edgeR_", gnt, ".RDS")))
+
   
    # save results DE tables, diferent files for each cluster
    lapply(names(de_results_gnt), function(cluster){
