@@ -114,6 +114,16 @@ de_results_KOvsHET <- pseudoBulkDGE(summed_filt,
                                     condition=summed_filt$genotype 
 )
 
+# create a list to loop through the 3 de_results
+de_results <- list(KO=de_results_KO, HET=de_results_HET, KOvsHET=de_results_KOvsHET)
+for (gnt in c("KO", "HET", "KOvsHET")) {
+    #extract each genotype dataframe list
+  de_results_gnt <- de_results[[gnt]]
+  
+  #save R objects
+  dir.create(here("processed",project), showWarnings = FALSE)
+  saveRDS(de_results_gnt, here("processed",project, paste0("DE_results_edgeR_", gnt, ".RDS")))
+}
 ```
 
 ## Filter ambient RNA background
@@ -123,7 +133,7 @@ We will use these known genes as previous knowledge to build an ambient model an
 
 The list of microglia genes used are in top 100 of middle-aged microglia markers and significantly down in at least one cluster in young and/or middle-aged datasets.
 
-```{r background, eval=FALSE}
+```{r background, eval=TRUE}
 
 # to calculate the ambient the raw data should be used
 samples <- dir(here("data/raw/"))
@@ -167,10 +177,11 @@ aggregate_ambient <- aggregate_ambient[row.names(summed_filt),]
 
 # upper bound of gene contribution from ambient contamination
 max_ambient <- ambientContribMaximum(counts(summed_filt), ambient= aggregate_ambient, mode = "proportion")
-
+la
 # mean of result obtained between all samples -> needs to be done for each cluster
-# create a list to loop through the 3 de_results
-de_results <- list(KO=de_results_KO, HET=de_results_HET, KOvsHET=de_results_KOvsHET)
+
+# create a list to hold the updated DFs ( i tried with lapply but not there yet)
+de_results_ambient <- list(KO="", HET="", KOvsHET="")
 for (gnt in c("KO", "HET", "KOvsHET")) {
     #extract each genotype dataframe list
   de_results_gnt <- de_results[[gnt]]
@@ -183,7 +194,11 @@ for (gnt in c("KO", "HET", "KOvsHET")) {
     # combine with previous dataframe
     cbind(de_results_clu, maxAmbient = cluster_max_ambient)
   })
+  names(de_result_gnt_ambient) <- names(de_results_gnt)
+   # save in the genotypes list
+  de_results_ambient[[gnt]] <- de_result_gnt_ambient
 }
+
 ```
 
 ## Save, filter and summarised the results
@@ -203,12 +218,11 @@ de_filtered_genes.csv contains the list of genes DE.
 for(gnt in c("KO", "HET", "KOvsHET")){
   
   #extract each table
-  de_results_gnt <- de_results[[gnt]]
-  
-  
+  de_results_gnt <- de_results_ambient[[gnt]]
+
   #save R objects
   dir.create(here("processed",project), showWarnings = FALSE)
-  saveRDS(de_results_gnt, here("processed",project, paste0("DE_results_edgeR_", gnt, ".RDS")))
+  saveRDS(de_results_gnt, here("processed",project, paste0("DE_results_ambient_edgeR_", gnt, ".RDS")))
 
   
    # save results DE tables, diferent files for each cluster
