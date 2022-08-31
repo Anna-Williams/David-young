@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 #### set-up
-```{r}
+```{r message=FALSE, warning=FALSE}
 library(scran) # for scDE
 library(scater) # for aggregate counts
 library(edgeR) #for De
@@ -20,10 +20,11 @@ library(here) # reproducible paths
 library(DropletUtils) # ambient RNA
 library(scuttle) # modify gene names
 ```
+
 ```{r load}
 source(here("src/colours.R"))
-project <- "fire-mice"
-sce <- readRDS(here("processed", project, "sce_anno_02.RDS")) 
+project <- "de_tests"
+sce <- readRDS(here("processed", "fire-mice", "sce_anno_02.RDS")) #TODO: change back to "project"
 clusters_name <- "clusters_named"
 ```
 
@@ -113,27 +114,6 @@ de_results_KOvsHET <- pseudoBulkDGE(summed_filt,
                                     condition=summed_filt$genotype 
 )
 
-
-# create a list to loop through the 3 de_results
-de_results <- list(KO=de_results_KO, HET=de_results_HET, KOvsHET=de_results_KOvsHET)
-for(gnt in c("KO", "HET", "KOvsHET")){
-  
-  #extract each table
-  de_results_gnt <- de_results[[gnt]]
-  
-  #save R objects
-  saveRDS(de_results_HET, here("processed",project, paste0("DE_results_edgeR_", gnt, ".RDS")))
-  
-  # save results DE tables
-  lapply(names(de_results_gnt), function(cluster){
-    de_results_clu <- de_results_gnt[[cluster]]
-    write.csv(de_results_clu, here("outs", project, "DE_edgeR", paste0("de_results_", gnt), paste0("de_results_", gnt, "_", cluster, ".csv")), quote = FALSE)
-  }
-  )
-  # save failed
-  write.csv(metadata(de_results_HET), here("outs", project,"DE_edgeR", paste0("fail_contrast_DE_",gnt,".csv")), row.names = FALSE)
-            
-}
 ```
 
 ## Filter ambient RNA background
@@ -192,7 +172,7 @@ max_ambient <- ambientContribMaximum(counts(summed_filt), ambient= aggregate_amb
 #rowMeans(max_ambient[,summed_filt$clusters_named=="Astro_1"], na.rm = TRUE)
 ```
 
-## Filter the results
+## Save, filter and summarised the results
 
 For each one of the labels a list is produced with the DE genes at a FDR of 5%. Summaries of these results are saved in /outs/`r project`/DE_edgeR/ 
 
@@ -203,7 +183,36 @@ de_filtered_genecounts.csv contains a small summary with the number of genes DE 
 
 de_filtered_genes.csv contains the list of genes DE. 
 
+```{r save-de, eval=TRUE, warning=FALSE}
+## SAVE per cluster and ADD BACKGROUND data
+
+# create a list to loop through the 3 de_results
+de_results <- list(KO=de_results_KO, HET=de_results_HET, KOvsHET=de_results_KOvsHET)
+for(gnt in c("KO", "HET", "KOvsHET")){
+  
+  #extract each table
+  de_results_gnt <- de_results[[gnt]]
+  
+  #save R objects
+  dir.create(here("processed",project), showWarnings = FALSE)
+  saveRDS(de_results_HET, here("processed",project, paste0("DE_results_edgeR_", gnt, ".RDS")))
+  
+   # save results DE tables, diferent files for each cluster
+   lapply(names(de_results_gnt), function(cluster){
+     de_results_clu <- de_results_gnt[[cluster]]
+     dir.create(here("outs", project, "DE_edgeR", paste0("de_results_", gnt)), showWarnings = FALSE)
+     write.csv(de_results_clu, here("outs", project, "DE_edgeR", paste0("de_results_", gnt), paste0("de_results_", gnt, "_", cluster, ".csv")), quote = FALSE)
+   }
+   )
+   # save failed test
+   write.csv(metadata(de_results_gnt), here("outs", project,"DE_edgeR", paste0("fail_contrast_DE_",gnt,".csv")), row.names = FALSE)
+            
+}
+```
+
+
 ```{r filter-de, eval=FALSE}
+## FILTER and SUMMARISE
 de_results <- list(KO=de_results_KO, HET=de_results_HET, KOvsHET=de_results_KOvsHET)
 cols <- list(KO=col_wt_het_ko[3], HET=col_wt_het_ko[2], WT=col_wt_het_ko[1])
 for(gnt in c("KO", "HET", "KOvsHET")){
@@ -219,10 +228,9 @@ for(gnt in c("KO", "HET", "KOvsHET")){
   is_de_flt <- is_de[(rowSums(abs(is_de_0)) != 0), ]
   
   write.csv(summary_de, here("outs", project,"DE_edgeR", paste0( "de_", gnt, "_filtered_genecounts.csv")))
-  
-  
   write.csv(is_de_flt, here("outs", project, "DE_edgeR", paste0( "de_", gnt, "_filtered_genes.csv" )))
 }
+
 ```
 
 
