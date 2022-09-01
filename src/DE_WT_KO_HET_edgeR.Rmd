@@ -123,6 +123,8 @@ for (gnt in c("KO", "HET", "KOvsHET")) {
   #save R objects
   dir.create(here("processed",project), showWarnings = FALSE)
   saveRDS(de_results_gnt, here("processed",project, paste0("DE_results_edgeR_", gnt, ".RDS")))
+     # save failed test
+  write.csv(metadata(de_results_gnt), here("outs", project,"DE_edgeR", paste0("fail_contrast_DE_",gnt,".csv")), row.names = FALSE)
 }
 ```
 
@@ -177,7 +179,7 @@ aggregate_ambient <- aggregate_ambient[row.names(summed_filt),]
 
 # upper bound of gene contribution from ambient contamination
 max_ambient <- ambientContribMaximum(counts(summed_filt), ambient= aggregate_ambient, mode = "proportion")
-la
+
 # mean of result obtained between all samples -> needs to be done for each cluster
 
 # create a list to hold the updated DFs ( i tried with lapply but not there yet)
@@ -201,7 +203,7 @@ for (gnt in c("KO", "HET", "KOvsHET")) {
 
 ```
 
-## Save, filter and summarised the results
+## Save, filter and summarise the results
 
 For each one of the labels a list is produced with the DE genes at a FDR of 5%. Summaries of these results are saved in /outs/`r project`/DE_edgeR/ 
 
@@ -232,8 +234,6 @@ for(gnt in c("KO", "HET", "KOvsHET")){
      write.csv(de_results_clu, here("outs", project, "DE_edgeR", paste0("de_results_", gnt), paste0("de_results_", gnt, "_", cluster, ".csv")), quote = FALSE)
    }
    )
-   # save failed test
-   write.csv(metadata(de_results_gnt), here("outs", project,"DE_edgeR", paste0("fail_contrast_DE_",gnt,".csv")), row.names = FALSE)
             
 }
 ```
