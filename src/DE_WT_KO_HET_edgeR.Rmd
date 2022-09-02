@@ -136,12 +136,13 @@ We will use these known genes as previous knowledge to build an ambient model an
 The list of microglia genes used are in top 100 of middle-aged microglia markers and significantly down in at least one cluster in young and/or middle-aged datasets.
 
 ```{r background, eval=TRUE}
-
+# import data
 # to calculate the ambient the raw data should be used
 samples <- dir(here("data/raw/"))
 # create empty vector to hold ambient
 ambient <- vector("list", length(samples))
 names(ambient) <- samples
+microglia_genes <- readLines(here("data", "microglia_genes.csv"))
 # generate profile for each sample
 for(sample in samples){
   matrix <- here("data/raw/", sample, "raw_feature_bc_matrix")
@@ -179,6 +180,7 @@ aggregate_ambient <- aggregate_ambient[row.names(summed_filt),]
 
 # upper bound of gene contribution from ambient contamination
 max_ambient <- ambientContribMaximum(counts(summed_filt), ambient= aggregate_ambient, mode = "proportion")
+microglia_ambient <- ambientContribNegative(counts(summed_filt), ambient = aggregate_ambient, features =  microglia_genes, mode = "proportion")
 
 # mean of result obtained between all samples -> needs to be done for each cluster
 
@@ -193,8 +195,14 @@ for (gnt in c("KO", "HET", "KOvsHET")) {
     de_results_clu <- de_results_gnt[[cluster]]
     # calculate mean of all samples for that cluster
     cluster_max_ambient <- rowMeans(max_ambient[, summed_filt$clusters_named == cluster], na.rm = TRUE)
+    # for the ambient calculated from microglia genes exlude the immune and microglia clusters
+    if(cluster %in% c("Microglia", "BAMs", "Immune")){
+      cluster_microglia_ambient <- NA
+    }else{
+      cluster_microglia_ambient <- rowMeans(microglia_ambient[, summed_filt$clusters_named == cluster], na.rm = TRUE)
+    }
     # combine with previous dataframe
-    cbind(de_results_clu, maxAmbient = cluster_max_ambient)
+    cbind(de_results_clu, maxAmbient = cluster_max_ambient, microgliaAmbient = cluster_microglia_ambient, minAmbient = min(cluster_max_ambient, cluster_microglia_ambient))
   })
   names(de_result_gnt_ambient) <- names(de_results_gnt)
    # save in the genotypes list
