@@ -52,7 +52,7 @@ plot_FC_bycluster <- function(de_results,
         axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
         legend.title = element_blank()
       ) +
-      ylab("logFC fire-mice ko to wt") +
+      ylab("Log Fold Change") +
       xlab(element_blank())
   } else {
     de_results_df
