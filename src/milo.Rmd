@@ -1,7 +1,7 @@
 ---
 title: "Milo"
 author: "Nadine Bestard"
-date: "11/04/2022"
+date: "`r Sys.Date()`"
 output:
   html_document:
     code_folding: hide
@@ -193,6 +193,7 @@ da_results_ko$clusters_named <- ifelse(da_results_ko$clusters_named_fraction < 0
 Now we can visualize the distribution of DA Fold Changes in different cell types
 
 ```{r fig.height=8, fig.width=7, dev="jpeg"}
+da_results_ko$clusters_named <- factor(da_results_ko$clusters_named, rev(c("BAMs", "Microglia", "Immune", "Astro_1", "Astro_2", "Astro_Oligo", "OPC", "pOPC", "iOligo", "mOligo_1", "mOligo_2", "mOligo_3", "mOligo_4", "Endothelial", "Mural_cells", "ChP_epithelia", "iNeurons_&_NRPs", "mNeuron_ex", "mNeuron_in", "Mixed")))
 plotDAbeeswarm(da_results_ko, group.by = "clusters_named")  +  scale_colour_gradient2(high = scales::muted("red"), mid = "white", low = scales::muted("blue")) + xlab("")
 ```
 
@@ -308,6 +309,11 @@ plotDAbeeswarm(da_results_het, group.by = "clusters_named")
 ```
 
 ```{r}
+# relevel
+da_results_het$clusters_named <- 
+  factor(da_results_het$clusters_named, rev(c("BAMs", "Microglia", "Immune", "Astro_1", "Astro_2", "Astro_Oligo", "OPC", "pOPC", "iOligo", "mOligo_1", "mOligo_2", "mOligo_3", "Endothelial", "Mural_cells", "ChP_epithelia", "iNeurons_&_NRPs", "mNeuron_ex", "mNeuron_in", "Mixed")))
+# I was going to modify the function, but it's easier to just assign the variables and 
+# use the function code. 
 #plotDAbeeswarm_mod <- function(da.res, group.by=NULL, alpha=0.1, subset.nhoods=NULL){
 da.res <- da_results_het
 group.by <- "clusters_named"
