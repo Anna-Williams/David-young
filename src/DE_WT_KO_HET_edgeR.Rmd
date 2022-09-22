@@ -23,8 +23,8 @@ library(scuttle) # modify gene names
 
 ```{r load}
 source(here("src/colours.R"))
-project <- "de_tests"
-sce <- readRDS(here("processed", "fire-mice", "sce_anno_02.RDS")) #TODO: change back to "project"
+project <- "fire-mice"
+sce <- readRDS(here("processed", project, "sce_anno_02.RDS"))
 clusters_name <- "clusters_named"
 ```
 
@@ -202,7 +202,7 @@ for (gnt in c("KO", "HET", "KOvsHET")) {
       cluster_microglia_ambient <- rowMeans(microglia_ambient[, summed_filt$clusters_named == cluster], na.rm = TRUE)
     }
     # combine with previous dataframe
-    cbind(de_results_clu, maxAmbient = cluster_max_ambient, microgliaAmbient = cluster_microglia_ambient, minAmbient = min(cluster_max_ambient, cluster_microglia_ambient))
+    cbind(de_results_clu, maxAmbient = cluster_max_ambient, microgliaAmbient = cluster_microglia_ambient, minAmbient = pmin(cluster_max_ambient, cluster_microglia_ambient))
   })
   names(de_result_gnt_ambient) <- names(de_results_gnt)
    # save in the genotypes list
