@@ -27,7 +27,8 @@ plot_FC_bycluster <- function(de_results,
     mutate(Significant = ifelse(FDR < FDR_threshold,
                                 yes = ifelse(logFC > logFC_threshold, "upregulated", "downregulated"),
                                 no = "not-significant")) %>% 
-    mutate(logFC_colour = ifelse(Significant == "not-significant", NA, logFC))
+    mutate(logFC_colour = ifelse(Significant == "not-significant", NA, logFC))  %>%
+    mutate(cluster = forcats::fct_relevel(cluster, names(de_results)))
     
   
   if (ambient == TRUE) {
@@ -78,7 +79,7 @@ get_ambient_genes <- function(de_results,
                                 yes = ifelse(logFC > 0, "upregulated", "downregulated"),
                                 no = "not-significant"
     )) %>%
-    # mutate(cluster = forcats::fct_relevel(cluster, c("Astrocyte_1", "Astrocyte_2", "Astrocyte_3", "OligoAstro", "Oligo_1", "Oligo_2", "OPCs", "mNeurons", "iNeurons & NRPs", "Lymphocytes", "BAMs", "DCs",  "Endothelial", "fEndothelia", "Mural_cells", "ChP_epithelial"))) %>%
+    mutate(cluster = forcats::fct_relevel(cluster, names(de_results))) %>% 
     # sort so the significant values are plotted on top of the non significants
     arrange(desc(Significant))
 }
@@ -88,9 +89,9 @@ get_ambient_genes <- function(de_results,
 project <- "fire-mice"
 
 
-# loop through the 3 genotype comparisons
+# loop through the 2 genotype comparisons
 
-for (gnt in c("KO", "HET", "KOvsHET")) {
+for (gnt in c("KO", "KOvsHET")) {
   
   
   # load output from edgeR for each genoype
@@ -101,7 +102,11 @@ for (gnt in c("KO", "HET", "KOvsHET")) {
   # a list with the DE results, each element named as one of the clusters and
   # contain a DFrame with the DE for that cluster
   
-  plot_FC_bycluster(de_results_gnt, ambient=TRUE, ambient_threshold = 0.25)
+  # sort the order from the list
+  de_results_gnt <-
+  de_results_gnt[c("Astro_1", "Astro_2", "Astro_Oligo", "OPC", "pOPC", "iOligo", "mOligo_1", "mOligo_2", "mOligo_3", "Endothelial", "Mural_cells", "iNeurons_&_NRPs", "mNeuron_ex", "mNeuron_in")]
+  
+  plot_FC_bycluster(de_results_gnt, ambient=TRUE, ambient_threshold = 0.25) + theme(legend.direction="horizontal")
   ggsave(here("outs", project, "DE_edgeR", "plots", paste0("FC_clusters_", gnt, ".pdf")),
          height = 7, width = 10
   )
@@ -120,3 +125,22 @@ for (gnt in c("KO", "HET", "KOvsHET")) {
             row.names = FALSE
   )
 }
+
+## for the HETs I'll add the comparisons made aside. BAMs and Microglia. 
+de_results_het <- readRDS(here("processed", project, paste0("DE_results_ambient_edgeR_", "HET", ".RDS")))
+
+de_results_het[["Microglia"]] <- read.csv(here("outs", project, "DE_edgeR","de_results_HET", "de_resutls_HET_microglia.csv"), 
+                                          row.names = 1) %>%
+                                  mutate(minAmbient = 0)
+de_results_het[["BAMs"]] <- read.csv(here("outs", project, "DE_edgeR","de_results_HET", "de_resutls_HET_BAMs.csv"), 
+                                     row.names = 1) %>%
+                            mutate(minAmbient = 0)
+# sort the order from the list, for plot
+de_results_het <-
+  de_results_het[c("Microglia", "BAMs", "Astro_1", "Astro_2", "Astro_Oligo", "OPC", "pOPC", "iOligo", "mOligo_1", "mOligo_2", "mOligo_3", "Endothelial", "Mural_cells", "iNeurons_&_NRPs", "mNeuron_ex", "mNeuron_in")]
+
+plot_FC_bycluster(de_results_het, ambient=TRUE, ambient_threshold = 0.25)
+ggsave(here("outs", project, "DE_edgeR", "plots", paste0("FC_clusters_", "HET", ".pdf")),
+       height = 7, width = 11
+)
+
