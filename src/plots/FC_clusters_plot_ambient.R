@@ -6,7 +6,7 @@ library(here) # reproducible paths
 library(tidyverse) # manipulate dfs and ggplots
 
 # functions
-plot_FC_bycluster <- function(de_results,
+plotFCbyCluster <- function(de_results,
                               ambient = FALSE,
                               ambient_threshold = 0.1,
                               FDR_threshold = 0.05,
@@ -60,7 +60,37 @@ plot_FC_bycluster <- function(de_results,
   }
 }
 
-get_ambient_genes <- function(de_results,
+filterDE <- function(de_results,
+                     ambient = FALSE,
+                     ambient_threshold = 0.1,
+                     FDR_threshold = 0.05,
+                     logFC_threshold = 0) {
+  # transform all the DFrame to a standart df format
+  de_results_dfs <- lapply(
+    de_results,
+    function(x) {
+      na.omit(as.data.frame(x)) %>%
+        rownames_to_column("gene")
+    }
+  )
+  # merge all the dfs from the list in a single big dataframe
+  de_results_df <- bind_rows(de_results_dfs, .id = "cluster") %>%
+    # add column that indicates if the result is significant
+    mutate(Significant = ifelse(FDR < FDR_threshold,
+                                yes = ifelse(logFC > logFC_threshold, "upregulated", "downregulated"),
+                                no = "not-significant")) %>% 
+    filter(Significant != "not-significant") %>% 
+    mutate(cluster = forcats::fct_relevel(cluster, unique(cluster)))
+  
+  
+  if (ambient == TRUE) {
+    # filter the genes that are more than 10% ambient (or other threshold)
+    de_results_df <- de_results_df %>%
+      filter(minAmbient < ambient_threshold)
+  }
+}
+
+getAmbientGenes <- function(de_results,
                               ambient_threshold = 0.1,
                               FDR_threshold = 0.05) {
   # transform all the DFrame to a standart df format
@@ -106,19 +136,19 @@ for (gnt in c("KO", "KOvsHET")) {
   de_results_gnt <-
   de_results_gnt[c("Astro_1", "Astro_2", "Astro_Oligo", "OPC", "pOPC", "iOligo", "mOligo_1", "mOligo_2", "mOligo_3", "Endothelial", "Mural_cells", "iNeurons_&_NRPs", "mNeuron_ex", "mNeuron_in")]
   
-  plot_FC_bycluster(de_results_gnt, ambient=TRUE, ambient_threshold = 0.25) + theme(legend.direction="horizontal")
+  plotFCbyCluster(de_results_gnt, ambient=TRUE, ambient_threshold = 0.25) + theme(legend.direction="horizontal")
   ggsave(here("outs", project, "DE_edgeR", "plots", paste0("FC_clusters_", gnt, ".pdf")),
          height = 7, width = 10
   )
   
-  de_results_df <- plot_FC_bycluster(de_results_gnt, ambient=TRUE, data = TRUE)
-  write.csv(filter(de_results_df, Significant != "not-significant"),
+  de_results_df <- filterDE(de_results_gnt, ambient=TRUE)
+  write.csv(de_results_df,
             here("outs", project, "DE_edgeR", paste0("de_results_", gnt), paste0("de_results_", gnt, "_combined_significant_ambientremoved.csv")),
             row.names = FALSE
   )
   
   ## save csv with deleted genes
-  de_results_df_ambient <- get_ambient_genes(de_results_gnt)
+  de_results_df_ambient <- getAmbientGenes(de_results_gnt)
   
   write.csv(filter(de_results_df_ambient, Significant != "not-significant"),
             here("outs", project, "DE_edgeR", paste0("de_results_", gnt), paste0("de_results_", gnt, "_combined_significant_onlyambient.csv")),
@@ -139,7 +169,7 @@ de_results_het[["BAMs"]] <- read.csv(here("outs", project, "DE_edgeR","de_result
 de_results_het <-
   de_results_het[c("Microglia", "BAMs", "Astro_1", "Astro_2", "Astro_Oligo", "OPC", "pOPC", "iOligo", "mOligo_1", "mOligo_2", "mOligo_3", "Endothelial", "Mural_cells", "iNeurons_&_NRPs", "mNeuron_ex", "mNeuron_in")]
 
-plot_FC_bycluster(de_results_het, ambient=TRUE, ambient_threshold = 0.25)
+plotFCbyCluster(de_results_het, ambient=TRUE, ambient_threshold = 0.25)
 ggsave(here("outs", project, "DE_edgeR", "plots", paste0("FC_clusters_", "HET", ".pdf")),
        height = 7, width = 11
 )
