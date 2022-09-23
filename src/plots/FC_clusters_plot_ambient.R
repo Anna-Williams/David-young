@@ -10,8 +10,7 @@ plotFCbyCluster <- function(de_results,
                               ambient = FALSE,
                               ambient_threshold = 0.1,
                               FDR_threshold = 0.05,
-                              logFC_threshold = 0,
-                              data = FALSE) {
+                              logFC_threshold = 0) {
   
   # transform all the DFrame to a standart df format
   de_results_dfs <- lapply(
@@ -28,23 +27,20 @@ plotFCbyCluster <- function(de_results,
                                 yes = ifelse(logFC > logFC_threshold, "upregulated", "downregulated"),
                                 no = "not-significant")) %>% 
     mutate(logFC_colour = ifelse(Significant == "not-significant", NA, logFC))  %>%
-    mutate(cluster = forcats::fct_relevel(cluster, unique(cluster)))
-    
+    # order the levels to display in correct order in plot
+    mutate(cluster = forcats::fct_relevel(cluster, unique(cluster)))  %>% 
+    # sort so the significant values are plotted on top of the non significants
+    mutate(Significant = forcats::fct_relevel(Significant, c("upregulated", "downregulated", "not-significant"))) %>%
+    arrange(desc(Significant))
   
   if (ambient == TRUE) {
     # filter the genes that are more than 10% ambient (or other threshold)
     de_results_df <- de_results_df %>%
       filter(minAmbient < ambient_threshold)
   }
-  
-  if (data == FALSE) {
+
     ## plot ---
     de_results_df %>%
-      # order the levels to display in correct order in plot
-      mutate(Significant = forcats::fct_relevel(Significant, c("upregulated", "downregulated", "not-significant"))) %>%
-      # mutate(cluster = forcats::fct_relevel(cluster, c("Astrocyte_1", "Astrocyte_2", "Astrocyte_3", "OligoAstro", "Oligo_1", "Oligo_2", "OPCs", "mNeurons", "iNeurons & NRPs", "Lymphocytes", "BAMs", "DCs",  "Endothelial", "fEndothelia", "Mural_cells", "ChP_epithelial"))) %>%
-      # sort so the significant values are plotted on top of the non significants
-      arrange(desc(Significant)) %>%
       ggplot(mapping = aes(x = cluster, y = logFC, color = logFC_colour)) +
       geom_jitter() +
       scale_colour_gradient2(high = scales::muted("red"), mid = "white", low = scales::muted("blue")) +
@@ -55,9 +51,7 @@ plotFCbyCluster <- function(de_results,
       ) +
       ylab("Log Fold Change") +
       xlab(element_blank())
-  } else {
-    de_results_df
-  }
+}
 }
 
 filterDE <- function(de_results,
@@ -140,7 +134,7 @@ for (gnt in c("KO", "KOvsHET")) {
   ggsave(here("outs", project, "DE_edgeR", "plots", paste0("FC_clusters_", gnt, ".pdf")),
          height = 7, width = 10
   )
-  
+
   de_results_df <- filterDE(de_results_gnt, ambient=TRUE)
   write.csv(de_results_df,
             here("outs", project, "DE_edgeR", paste0("de_results_", gnt), paste0("de_results_", gnt, "_combined_significant_ambientremoved.csv")),
@@ -172,5 +166,5 @@ de_results_het <-
 plotFCbyCluster(de_results_het, ambient=TRUE, ambient_threshold = 0.25)
 ggsave(here("outs", project, "DE_edgeR", "plots", paste0("FC_clusters_", "HET", ".pdf")),
        height = 7, width = 11
-)
 
+)
