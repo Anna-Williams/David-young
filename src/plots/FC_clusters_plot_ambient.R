@@ -76,7 +76,7 @@ plotDEbyCluster <- function(de_results,
       no = "not-significant"
     )) %>%
     mutate(FDR_colour = ifelse(Significant == "not-significant", NA,
-      ifelse(Significant == "downregulated", 0 - (0.05 - FDR), 0.05 - FDR)
+      ifelse(Significant == "downregulated", 0 - (FDR_threshold - FDR), FDR_threshold - FDR)
     ))  %>%
     # order the levels to display in correct order in plot
     mutate(cluster = forcats::fct_relevel(cluster, unique(cluster)))  %>% 
@@ -101,7 +101,7 @@ plotDEbyCluster <- function(de_results,
       scale_colour_gradientn(
         colours = pals::coolwarm(),
         breaks = c(max_col, 0, min_col),
-        labels = c(round(0.05 - max_col, 2), 0.05, round(0.05 + min_col, 2)),
+        labels = c(round(FDR_threshold - max_col, 2), FDR_threshold, round(FDR_threshold + min_col, 2)),
         name = "adj. p-value"
       ) +
       theme_minimal() +
