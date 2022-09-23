@@ -6,11 +6,16 @@ library(here) # reproducible paths
 library(tidyverse) # manipulate dfs and ggplots
 
 # functions
-plotFCbyCluster <- function(de_results,
+
+plotFCbyCluster <- function(de_results, # scran pseudoBulkDGE output
                               ambient = FALSE,
                               ambient_threshold = 0.1,
                               FDR_threshold = 0.05,
                               logFC_threshold = 0) {
+  
+  # plots each gene organised on the X axis by clusters and representing the 
+  # FC on the y axis and the colour if they are significant
+  
   
   # transform all the DFrame to a standart df format
   de_results_dfs <- lapply(
@@ -53,12 +58,17 @@ plotFCbyCluster <- function(de_results,
       xlab(element_blank())
 }
 
-plotDEbyCluster <- function(de_results,
+plotDEbyCluster <- function(de_results, # scran pseudoBulkDGE output
                             ambient = FALSE,
                             ambient_threshold = 0.1,
                             FDR_threshold = 0.05,
                             logFC_threshold = 0,
                             data = FALSE) {
+  
+  # plots each gene organised on the X axis by clusters and representing the 
+  # FC on the y axis 
+  # and the FDR with the colour gradient: 
+  # smaller FDR have more intense colour (red if up and blue if down), non-significant genes are grey. 
 
   # transform all the DFrame to a standart df format
   de_results_dfs <- lapply(
@@ -116,6 +126,11 @@ filterDE <- function(de_results,
                      ambient_threshold = 0.1,
                      FDR_threshold = 0.05,
                      logFC_threshold = 0) {
+  
+  # filters the scran pseudoBulkDGE output, returning a combined df with all the clusters
+  # appended
+  
+  
   # transform all the DFrame to a standart df format
   de_results_dfs <- lapply(
     de_results,
@@ -144,6 +159,10 @@ filterDE <- function(de_results,
 getAmbientGenes <- function(de_results,
                               ambient_threshold = 0.1,
                               FDR_threshold = 0.05) {
+  
+  # To know which genes are filtered out with a certain ambient threshold: extracts from the scran pseudoBulkDGE output, 
+  # returning a combined df with all the clusters appended
+  
   # transform all the DFrame to a standart df format
   de_results_dfs <- lapply(
     de_results,
