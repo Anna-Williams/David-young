@@ -28,7 +28,7 @@ plot_FC_bycluster <- function(de_results,
                                 yes = ifelse(logFC > logFC_threshold, "upregulated", "downregulated"),
                                 no = "not-significant")) %>% 
     mutate(logFC_colour = ifelse(Significant == "not-significant", NA, logFC))  %>%
-    mutate(cluster = forcats::fct_relevel(cluster, names(de_results)))
+    mutate(cluster = forcats::fct_relevel(cluster, unique(cluster)))
     
   
   if (ambient == TRUE) {
