@@ -52,6 +52,63 @@ plotFCbyCluster <- function(de_results,
       ylab("Log Fold Change") +
       xlab(element_blank())
 }
+
+plotDEbyCluster <- function(de_results,
+                            ambient = FALSE,
+                            ambient_threshold = 0.1,
+                            FDR_threshold = 0.05,
+                            logFC_threshold = 0,
+                            data = FALSE) {
+
+  # transform all the DFrame to a standart df format
+  de_results_dfs <- lapply(
+    de_results,
+    function(x) {
+      na.omit(as.data.frame(x)) %>%
+        rownames_to_column("gene")
+    }
+  )
+  # merge all the dfs from the list in a single big dataframe
+  de_results_df <- bind_rows(de_results_dfs, .id = "cluster") %>%
+    # add column that indicates if the result is significant
+    mutate(Significant = ifelse(FDR < FDR_threshold,
+      yes = ifelse(logFC > logFC_threshold, "upregulated", "downregulated"),
+      no = "not-significant"
+    )) %>%
+    mutate(FDR_colour = ifelse(Significant == "not-significant", NA,
+      ifelse(Significant == "downregulated", 0 - (0.05 - FDR), 0.05 - FDR)
+    ))  %>%
+    # order the levels to display in correct order in plot
+    mutate(cluster = forcats::fct_relevel(cluster, unique(cluster)))  %>% 
+    # sort so the significant values are plotted on top of the non significants
+    mutate(Significant = forcats::fct_relevel(Significant, c("upregulated", "downregulated", "not-significant"))) %>%
+    arrange(desc(Significant))
+
+  if (ambient == TRUE) {
+    # filter the genes that are more than 10% ambient (or other threshold)
+    de_results_df <- de_results_df %>%
+      filter(minAmbient < ambient_threshold)
+  }
+  
+  ## plot ---
+    # set up legend colours
+    max_col <- max(na.omit(de_results_df$FDR_colour))
+    min_col <- min(na.omit(de_results_df$FDR_colour))
+    ## plot ---
+    de_results_df %>%
+      ggplot(mapping = aes(x = cluster, y = logFC, color = FDR_colour)) +
+      geom_jitter() +
+      scale_colour_gradientn(
+        colours = pals::coolwarm(),
+        breaks = c(max_col, 0, min_col),
+        labels = c(round(0.05 - max_col, 2), 0.05, round(0.05 + min_col, 2)),
+        name = "adj. p-value"
+      ) +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+      ylab("Log Fold Change") +
+      xlab(element_blank())
+
 }
 
 filterDE <- function(de_results,
@@ -135,6 +192,11 @@ for (gnt in c("KO", "KOvsHET")) {
          height = 7, width = 10
   )
 
+  plotDEbyCluster(de_results_gnt, ambient=TRUE, ambient_threshold = 0.25) 
+  ggsave(here("outs", project, "DE_edgeR", "plots", paste0("DE_clusters_", gnt, ".pdf")),
+         height = 7, width = 10
+  )
+  
   de_results_df <- filterDE(de_results_gnt, ambient=TRUE)
   write.csv(de_results_df,
             here("outs", project, "DE_edgeR", paste0("de_results_", gnt), paste0("de_results_", gnt, "_combined_significant_ambientremoved.csv")),
@@ -166,5 +228,9 @@ de_results_het <-
 plotFCbyCluster(de_results_het, ambient=TRUE, ambient_threshold = 0.25)
 ggsave(here("outs", project, "DE_edgeR", "plots", paste0("FC_clusters_", "HET", ".pdf")),
        height = 7, width = 11
+)
 
+plotDEbyCluster(de_results_het, ambient=TRUE, ambient_threshold = 0.25) 
+ggsave(here("outs", project, "DE_edgeR", "plots", paste0("DE_clusters_", "HET", ".pdf")),
+       height = 7, width = 10
 )
