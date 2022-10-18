@@ -501,16 +501,20 @@ sce$genotype <- relevel(factor(sce$genotype), "WT")
 
 sce$clusters_named <-
   factor(sce$clusters_named,
-    levels = c("Astro_1", "Astro_2", "Astro_Oligo", "mOligo_1", "mOligo_2", "mOligo_3", 
-"mOligo_4", "iOligo", "OPC", "pOPC",   "mNeuron_ex",  
- "mNeuron_in", "iNeurons_&_NRPs","Microglia", "Immune", "BAMs",
-"Mural_cells","Endothelial", "ChP_epithelia")
+    levels = c("Microglia", "BAMs","Immune", "Astro_1", "Astro_2", "Astro_Oligo", "OPC", "pOPC", "iOligo", "mOligo_1", "mOligo_2", "mOligo_3", 
+"mOligo_4", "Endothelial", "Mural_cells", "ChP_epithelia", "iNeurons_&_NRPs", "mNeuron_ex",  
+ "mNeuron_in"
+ )
   )
-#alphabetical:         levels = clusters_named[order(clusters_named)])
-# 
-# sce$celltype <- 
-#   factor(sce$celltype, 
-#          levels = c())
+
+# add annotation of the samples
+sample_named_map <- c("WTyo1_h", "HETyo2_h", "KOyo3_h", "WTyo1_c", "HETyo2_c", "KOyo3_c", "WTyo4_h", "HETyo5_h", "KOyo6_h","WTyo4_c", "HETyo5_c", "KOyo6_c")
+names(sample_named_map) <- unique(sce$Sample)
+
+sce$sample_named <- sample_named_map[sce$Sample]
+
+# add a column with both, tissue and genotype
+sce$tissue_genotype <- paste(sce$tissue, sce$genotype, sep = "_")
 
 
  saveRDS(sce, here("processed", project, "sce_anno_02.RDS"))
