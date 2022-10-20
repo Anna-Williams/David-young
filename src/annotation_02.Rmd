@@ -507,11 +507,13 @@ sce$clusters_named <-
  )
   )
 
-# add annotation of the samples
+# add annotation of the samples (cool way to map, thanks stackoverflow)
 sample_named_map <- c("WTyo1_h", "HETyo2_h", "KOyo3_h", "WTyo1_c", "HETyo2_c", "KOyo3_c", "WTyo4_h", "HETyo5_h", "KOyo6_h","WTyo4_c", "HETyo5_c", "KOyo6_c")
 names(sample_named_map) <- unique(sce$Sample)
 
-sce$sample_named <- sample_named_map[sce$Sample]
+sce$sample_named <- factor(sample_named_map[sce$Sample], levels = c("WTyo1_h", "HETyo2_h", "KOyo3_h", "WTyo1_c", "HETyo2_c", "KOyo3_c", "WTyo4_h", "HETyo5_h", "KOyo6_h","WTyo4_c", "HETyo5_c", "KOyo6_c"))
+
+
 
 # add a column with both, tissue and genotype
 sce$tissue_genotype <- paste(sce$tissue, sce$genotype, sep = "_")
