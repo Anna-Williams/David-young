@@ -170,28 +170,9 @@ slingLineages(SlingshotDataSet(sce))
 ```
 TODO: 
 improve plotting.
-mark fire mice as end point, then it could : branch or be at the end of this single lineage - DONE
 
 Separate WT and KO ( cluster specific for KO will not be in the WT, how this affects trajectory? )
 
-
-Marking fire-mice specific cluster as end-point, as we know that these cells are present in the tissue and 
-aren't just a transitionary state.
-```{r}
-# run slingshot with end point
-sce <- slingshot(sce, clusterLabels = "k.40", reducedDim= "corrected-1", end.clus = "9")
-summary(sce$slingPseudotime_1)
-plotReducedDim(sce, "UMAP", colour_by = "slingPseudotime_1") 
-
-cols <- pals::viridis(100)[cut(sce$slingPseudotime_1, breaks = 100)]
-
-plot(reducedDims(sce)$corrected, col = cols)
-lines(SlingshotDataSet(sce), lwd=2, col='black', type = "lineages")
-
-# lineages
-slingLineages(SlingshotDataSet(sce))
-# Now the KO specific state forced the creation of a new lineage. 
-```
 
 ```{r eval=FALSE, include=FALSE}
 #NOT WORKING
