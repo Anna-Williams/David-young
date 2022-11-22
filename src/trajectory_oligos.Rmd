@@ -108,7 +108,7 @@ plotReducedDim(sce, "TSNE", colour_by = "clusters_named")
 # https://github.com/kstreet13/slingshot/issues/87
 reducedDim(sce, "corrected-1") <- reducedDim(sce, "corrected")[,1:22]
 # run slingshot
-sce <- slingshot(sce, clusterLabels = "clusters_named", reducedDim= "corrected-1")
+sce <- slingshot(sce, clusterLabels = "clusters_named", reducedDim= "corrected-1", start.clus="OPC")
 summary(sce$slingPseudotime_1)
 plotReducedDim(sce, "UMAP", colour_by = "slingPseudotime_1") 
 
@@ -118,6 +118,9 @@ plot(reducedDims(sce)$corrected, col = cols)
 lines(SlingshotDataSet(sce), lwd=2, col='black', type = "lineages")
 
 plotReducedDim(sce, "UMAP", colour_by= "clusters_named")
+
+# lineages
+slingLineages(SlingshotDataSet(sce))
 ```
 Two lineages are found. They go through oligo4. 
 
@@ -210,3 +213,5 @@ lines(SlingshotDataSet(sce_umap), lwd=2, col='black', type = "lineages")
 ```
 
 Just... no. No. iOligos should be in the path. 
+
+I tried another seed for the umap, where the oligo cluster is upside-down, and then the starting cluster is suddenly oligo-3 and then it branches to oligo4, oligo2 and oligo1. 
