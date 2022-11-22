@@ -1,0 +1,237 @@
+---
+title: "Trajectory Oligos"
+author: "Nadine Bestard"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Set-up
+```{r}
+library(here) # paths
+library(scran) # feature select
+library(batchelor) # correct batch effect
+library(scater) # dimred calculation
+library(bluster) # clustering
+library(slingshot) # trajectory
+```
+
+```{r}
+project <- "fire-mice"
+source(here("src/colours.R"))
+```
+
+## Subset
+
+
+```{r subset}
+sce <- readRDS(here("processed", project, "sce_anno_02.RDS"))
+oligodendroglia <- c("OPC", "pOPC", "iOligo", "mOligo_1", "mOligo_2", "mOligo_3", 
+"mOligo_4")
+sce <- sce[,sce$clusters_named %in% oligodendroglia]
+
+# remove unnecessary slots that are not representative anymore
+for(dim in reducedDimNames(sce)){
+  reducedDim(sce, dim) <- NULL
+}
+clusters_k <- grep("cluster_k", colnames(colData(sce)), value = T)
+clusters_seurat <- grep("originalexp_snn_res",colnames(colData(sce)), value = T)
+for(meta in c(clusters_seurat, clusters_k, "cluster_names")){
+  colData(sce)[[meta]] <- NULL
+}
+assay(sce, "reconstructed") <- NULL
+
+```
+
+As the QC thresholds in "QC_norm_featureselect_dimred_02.Rmd" are already celltype specific,
+ther is no need to redo a cell QC after subsetting. however some genes might not be expressed in this subsetted dataset, and will be removed for downstream. same threshold as in the past is used, mimimum 10 cells have to express the gene in order to keep it. 
+
+```{r genes}
+keep_feature <- rowSums(counts(sce) > 0) > 10
+sce <- sce[keep_feature,]
+```
+
+# Feature selection
+
+After subsetting the data the variable genes need to be selected again
+to better represent the variance in this cell population. We follow the
+same methods than for our first feature selection, selecting here for
+the top 2000 genes.
+
+```{r featureselect}
+gene_var_df <- modelGeneVar(sce, density.weights = FALSE) # density weights avoids overfitting due to high-abundance genes being HV
+gene_var <- metadata(gene_var_df)
+plot(gene_var$mean, gene_var$var, xlab= "Mean of log-expression", ylab= "Variance of log-expression")
+curve(gene_var$trend(x), lwd=2, add=T, col = "red")
+# select hvgs
+hvgs <- getTopHVGs(gene_var_df, n=2000)
+# save them in the object
+rowSubset(sce) <- hvgs
+```
+# Batch correction
+
+The Dimensional reduction step is skipped as we want to work on the corrected space. 
+
+```{r}
+set.seed(100)
+sce <- correctExperiments(sce,
+  batch = factor(sce$chip),
+  subset.row = rowSubset(sce),
+  correct.all=TRUE,
+  PARAM = FastMnnParam(
+  merge.order = 
+    list(list("3","5"), list("4","6")),
+  d = 23,
+  prop.k=0.10
+  )
+)
+# compute dimensional reduction 
+set.seed(100)
+sce <- runTSNE(sce,  dimred="corrected")
+
+set.seed(100)
+sce <- runUMAP(sce, dimred="corrected")
+
+plotReducedDim(sce, "UMAP", colour_by = "chip")
+plotReducedDim(sce, "UMAP", colour_by = "clusters_named")
+```
+
+# clustering
+```{r}
+ks <- c(5, 10, 15, 20, 25, 30, 35, 40)
+clust <- clusterSweep(reducedDim(sce, "corrected"),
+                      NNGraphParam(),
+                      k = as.integer(c(5, 10, 15, 20, 25, 30, 35, 40)))
+
+names <- paste0("k.", ks)
+# Use the list to store the info in the sce and plot result
+  idx <- c(1:length(names))
+  for (i in idx) {
+    k <- ks[i]
+    cluster_name <- names[i]
+    # remove previous versions of this clustering 
+    colData(sce)[[cluster_name]] <- NULL
+    colData(sce) <- cbind(colData(sce), clust$clusters[cluster_name])
+    # and plot the result
+    plotDim <-
+      plotReducedDim(
+        sce,
+        "UMAP",
+        colour_by = cluster_name,
+        point_size = 0.5,
+        point_alpha = 0.3,
+        text_by = cluster_name,
+        text_size = 3
+      )  + scale_color_hue() + ggtitle(paste("Clustering with k =", k))
+    print(plotDim)
+  }
+  
+  saveRDS(here("processed", project, "oligo_clusters"))
+```
+
+# Trajectory analysis with SlingShot
+
+
+```{r}
+# https://github.com/kstreet13/slingshot/issues/87
+reducedDim(sce, "corrected-1") <- reducedDim(sce, "corrected")[,1:22]
+# run slingshot
+sce <- slingshot(sce, clusterLabels = "k.40", reducedDim= "corrected-1")
+summary(sce$slingPseudotime_1)
+plotReducedDim(sce, "UMAP", colour_by = "slingPseudotime_1") 
+
+cols <- pals::viridis(100)[cut(sce$slingPseudotime_1, breaks = 100)]
+
+plot(reducedDims(sce)$corrected, col = cols)
+lines(SlingshotDataSet(sce), lwd=2, col='black', type = "lineages")
+
+plotReducedDim(sce, "corrected", colour_by= "clusters_named")
+```
+Only one lineage was found. 
+
+Map the trajectory back to the UMAP. this is the "smooth curve"option. Still don't know how to plot the lineages
+
+```{r}
+# extract information from slingshot object
+embed <- embedCurves(sce, "UMAP")
+embed <- slingCurves(embed)[[1]] 
+embed <- data.frame(embed$s[embed$ord, ])
+
+# i need to figure out how to plot the lineages
+plotUMAP(sce, colour_by = "slingPseudotime_1") +
+  geom_path(data = embed, aes(x = Dim.1, y = Dim.2), size = 1.2)
+
+# lineages
+slingLineages(SlingshotDataSet(sce))
+# specific cluster for KO is marked as a transitory stage.
+```
+TODO: 
+improve plotting.
+mark fire mice as end point, then it could : branch or be at the end of this single lineage - DONE
+
+Separate WT and KO ( cluster specific for KO will not be in the WT, how this affects trajectory? )
+
+
+Marking fire-mice specific cluster as end-point, as we know that these cells are present in the tissue and 
+aren't just a transitionary state.
+```{r}
+# run slingshot with end point
+sce <- slingshot(sce, clusterLabels = "k.40", reducedDim= "corrected-1", end.clus = "9")
+summary(sce$slingPseudotime_1)
+plotReducedDim(sce, "UMAP", colour_by = "slingPseudotime_1") 
+
+cols <- pals::viridis(100)[cut(sce$slingPseudotime_1, breaks = 100)]
+
+plot(reducedDims(sce)$corrected, col = cols)
+lines(SlingshotDataSet(sce), lwd=2, col='black', type = "lineages")
+
+# lineages
+slingLineages(SlingshotDataSet(sce))
+# Now the KO specific state forced the creation of a new lineage. 
+```
+
+```{r eval=FALSE, include=FALSE}
+#NOT WORKING
+# create a new psuedo time,mean of the two paths
+sce$slingPseudotimes <- rowMeans(cbind(sce$slingPseudotime_1, sce$slingPseudotime_2))
+
+
+
+# extract information from slingshot object
+embed <- embedCurves(sce, "UMAP")
+embed <- slingCurves(embed)
+
+# plot umap
+umap <- plotUMAP(sce, colour_by = "slingPseudotime_1")
+# plot each lineage
+for (path in embed) {
+embed_l <- data.frame(path$s[path$ord, ])
+
+# i need to figure out how to plot the 
+ plot <- umap +
+  geom_path(data = embed_l, aes(x = Dim.1, y = Dim.2), size = 1.2)
+}
+
+plot
+# lineages
+slingLineages(SlingshotDataSet(sce))
+```
+
+```{r}
+# From OSCA
+# Need to loop over the paths and add each one separately.
+gg <- plotUMAP(sce, colour_by="slingPseudotimes")
+embedded <- embedCurves(sce, "UMAP")
+embedded <- slingCurves(embedded)
+for (path in embedded) {
+    embedded_l <- data.frame(path$s[path$ord,])
+    gg <- gg + geom_path(data=embedded_l, aes(x=Dim.1, y=Dim.2), size=1.2)
+}
+
+gg
+```
+Ok, the plottings are terrible, but the information is there. 
+
