@@ -97,40 +97,9 @@ sce <- runUMAP(sce, dimred="corrected")
 
 plotReducedDim(sce, "UMAP", colour_by = "chip")
 plotReducedDim(sce, "UMAP", colour_by = "clusters_named")
+plotReducedDim(sce, "TSNE", colour_by = "clusters_named")
 ```
 
-# clustering
-```{r}
-ks <- c(5, 10, 15, 20, 25, 30, 35, 40)
-clust <- clusterSweep(reducedDim(sce, "corrected"),
-                      NNGraphParam(),
-                      k = as.integer(c(5, 10, 15, 20, 25, 30, 35, 40)))
-
-names <- paste0("k.", ks)
-# Use the list to store the info in the sce and plot result
-  idx <- c(1:length(names))
-  for (i in idx) {
-    k <- ks[i]
-    cluster_name <- names[i]
-    # remove previous versions of this clustering 
-    colData(sce)[[cluster_name]] <- NULL
-    colData(sce) <- cbind(colData(sce), clust$clusters[cluster_name])
-    # and plot the result
-    plotDim <-
-      plotReducedDim(
-        sce,
-        "UMAP",
-        colour_by = cluster_name,
-        point_size = 0.5,
-        point_alpha = 0.3,
-        text_by = cluster_name,
-        text_size = 3
-      )  + scale_color_hue() + ggtitle(paste("Clustering with k =", k))
-    print(plotDim)
-  }
-  
-  saveRDS(here("processed", project, "oligo_clusters"))
-```
 
 # Trajectory analysis with SlingShot
 
@@ -139,7 +108,7 @@ names <- paste0("k.", ks)
 # https://github.com/kstreet13/slingshot/issues/87
 reducedDim(sce, "corrected-1") <- reducedDim(sce, "corrected")[,1:22]
 # run slingshot
-sce <- slingshot(sce, clusterLabels = "k.40", reducedDim= "corrected-1")
+sce <- slingshot(sce, clusterLabels = "clusters_named", reducedDim= "corrected-1")
 summary(sce$slingPseudotime_1)
 plotReducedDim(sce, "UMAP", colour_by = "slingPseudotime_1") 
 
@@ -148,11 +117,17 @@ cols <- pals::viridis(100)[cut(sce$slingPseudotime_1, breaks = 100)]
 plot(reducedDims(sce)$corrected, col = cols)
 lines(SlingshotDataSet(sce), lwd=2, col='black', type = "lineages")
 
-plotReducedDim(sce, "corrected", colour_by= "clusters_named")
+plotReducedDim(sce, "UMAP", colour_by= "clusters_named")
 ```
-Only one lineage was found. 
+Two lineages are found. They go through oligo4. 
 
-Map the trajectory back to the UMAP. this is the "smooth curve"option. Still don't know how to plot the lineages
+Map the trajectory back to the UMAP. this is the "smooth curve"option. Solution from Slingshot pdf. 
+```{r}
+po <- embedCurves(sce, "UMAP")
+plot(reducedDims(sce)$UMAP, col = cols, asp = 1)
+lines(SlingshotDataSet(po), lwd = 3)
+```
+
 
 ```{r}
 # extract information from slingshot object
@@ -216,3 +191,22 @@ gg
 ```
 Ok, the plottings are terrible, but the information is there. 
 
+# Slingshot on the UMAP space.
+
+This is the way to go to get nice embedded lines in the plot. 
+
+```{r}
+# run slingshot
+sce_umap <- slingshot(sce, clusterLabels = "clusters_named", reducedDim= "UMAP", start.clus="OPC")
+summary(sce$slingPseudotime_1)
+plotReducedDim(sce_umap, "UMAP", colour_by = "slingPseudotime_1") 
+
+cols <- pals::viridis(100)[cut(sce$slingPseudotime_1, breaks = 100)]
+
+plot(reducedDims(sce)$UMAP, col = cols)
+lines(SlingshotDataSet(sce_umap), lwd=2, col='black', type = "lineages")
+
+#plotReducedDim(sce, "corrected", colour_by= "clusters_named")
+```
+
+Just... no. No. iOligos should be in the path. 
