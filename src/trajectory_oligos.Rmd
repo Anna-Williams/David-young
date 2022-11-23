@@ -2,7 +2,9 @@
 title: "Trajectory Oligos"
 author: "Nadine Bestard"
 date: "`r Sys.Date()`"
-output: html_document
+output:
+  html_document:
+    code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
@@ -110,21 +112,34 @@ reducedDim(sce, "corrected-1") <- reducedDim(sce, "corrected")[,1:22]
 # run slingshot
 sce <- slingshot(sce, clusterLabels = "clusters_named", reducedDim= "corrected-1", start.clus="OPC")
 summary(sce$slingPseudotime_1)
-plotReducedDim(sce, "UMAP", colour_by = "slingPseudotime_1") 
+```
 
-cols <- pals::viridis(100)[cut(sce$slingPseudotime_1, breaks = 100)]
 
-plot(reducedDims(sce)$corrected, col = cols)
+```{r}
+# as there are 3 trajectory lineages a mean between them can be calucluated
+sce$slingPseudotimes <- rowMeans(cbind(sce$slingPseudotime_1, sce$slingPseudotime_2, sce$slingPseudotime_3), na.rm = TRUE)
+
+plotReducedDim(sce, "UMAP", colour_by = "slingPseudotimes") 
+
+# plot the lineages
+cols <- pals::viridis(100)[cut(sce$slingPseudotimes, breaks = 100)]
+plot(reducedDims(sce)$corrected, col = cols, ylab = "PCA 2", xlab = "PCA 1")
 lines(SlingshotDataSet(sce), lwd=2, col='black', type = "lineages")
 
-plotReducedDim(sce, "UMAP", colour_by= "clusters_named")
+# plot the smooth lines
+cols <- pals::viridis(100)[cut(sce$slingPseudotimes, breaks = 100)]
+plot(reducedDims(sce)$corrected, col = cols, ylab = "PCA 2", xlab = "PCA 1")
+lines(SlingshotDataSet(sce), lwd=2, col='black')
+# map back to what they correspond
+plotReducedDim(sce, "corrected", colour_by= "clusters_named")  + ylab ("PCA 2") + xlab("PCA 1")
 
 # lineages
 slingLineages(SlingshotDataSet(sce))
 ```
-Two lineages are found. They go through oligo4. 
+Two lineages are found (+ going to the pOPCs). They go through oligo4. 
 
 Map the trajectory back to the UMAP. this is the "smooth curve"option. Solution from Slingshot pdf. 
+It looks better on the other embedding
 ```{r}
 po <- embedCurves(sce, "UMAP")
 plot(reducedDims(sce)$UMAP, col = cols, asp = 1)
@@ -132,7 +147,7 @@ lines(SlingshotDataSet(po), lwd = 3)
 ```
 
 
-```{r}
+```{r, eval=F}
 # extract information from slingshot object
 embed <- embedCurves(sce, "UMAP")
 embed <- slingCurves(embed)[[1]] 
@@ -146,11 +161,21 @@ plotUMAP(sce, colour_by = "slingPseudotime_1") +
 slingLineages(SlingshotDataSet(sce))
 # specific cluster for KO is marked as a transitory stage.
 ```
-TODO: 
-improve plotting.
 
-Separate WT and KO ( cluster specific for KO will not be in the WT, how this affects trajectory? )
+```{r}
+# This can be modified to plot plus or less lines! ###
+# loop over the paths and add each one separately.
+gg <- plotReducedDim(sce, dimred = "corrected", colour_by="slingPseudotimes")
+#embedded <- embedCurves(sce, "corrected")
+embedded <- SlingshotDataSet(sce)
+embedded <- slingCurves(embedded)
+for (path in embedded) {
+    embedded_l <- data.frame(path$s[path$ord,])
+    gg <- gg + geom_path(data=embedded_l, aes(x=Dim.1, y=Dim.2), size=1.2)
+}
 
+gg
+```
 
 ```{r eval=FALSE, include=FALSE}
 #NOT WORKING
@@ -179,8 +204,9 @@ plot
 slingLineages(SlingshotDataSet(sce))
 ```
 
-```{r}
+```{r, eval=F}
 # From OSCA
+sce$slingPseudotimes <- rowMeans(cbind(sce$slingPseudotime_1, sce$slingPseudotime_2), na.rm = TRUE)
 # Need to loop over the paths and add each one separately.
 gg <- plotUMAP(sce, colour_by="slingPseudotimes")
 embedded <- embedCurves(sce, "UMAP")
@@ -196,18 +222,27 @@ Ok, the plottings are terrible, but the information is there.
 
 # Slingshot on the UMAP space.
 
-This is the way to go to get nice embedded lines in the plot. 
+This is the way to go to get nice embedded lines in the UMAP plot. 
 
 ```{r}
+sce_umap <- sce
+previous <- grep("slingPseudotime", colnames(colData(sce_umap)), value=T)
+for(meta in previous){
+  colData(sce_umap)[[meta]] <- NULL
+}
 # run slingshot
 sce_umap <- slingshot(sce, clusterLabels = "clusters_named", reducedDim= "UMAP", start.clus="OPC")
 summary(sce$slingPseudotime_1)
 plotReducedDim(sce_umap, "UMAP", colour_by = "slingPseudotime_1") 
 
-cols <- pals::viridis(100)[cut(sce$slingPseudotime_1, breaks = 100)]
 
-plot(reducedDims(sce)$UMAP, col = cols)
+# create a new psuedo time,mean of the two paths
+sce_umap$slingPseudotimes <- rowMeans(cbind(sce_umap$slingPseudotime_1, sce_umap$slingPseudotime_2, sce_umap$slingPseudotime_3), na.rm = TRUE)
+#sce_umap$slingPseudotimes[is.na(sce_umap$slingPseudotimes)] <- min(sce$slingPseudotimes)
+cols <- pals::viridis(100)[cut(sce_umap$slingPseudotimes, breaks = 100)]
+plot(reducedDims(sce_umap)$UMAP, col = cols)
 lines(SlingshotDataSet(sce_umap), lwd=2, col='black', type = "lineages")
+
 
 #plotReducedDim(sce, "corrected", colour_by= "clusters_named")
 ```
@@ -215,3 +250,218 @@ lines(SlingshotDataSet(sce_umap), lwd=2, col='black', type = "lineages")
 Just... no. No. iOligos should be in the path. 
 
 I tried another seed for the umap, where the oligo cluster is upside-down, and then the starting cluster is suddenly oligo-3 and then it branches to oligo4, oligo2 and oligo1. 
+
+- Conclusion: No Umap .Backed up by [this](https://www.youtube.com/watch?v=Fbd08bIv4yk&t=776s), from the developers.
+
+```{r save}
+saveRDS(sce, here("processed", project, "oligo_trajectory.rds"))
+```
+
+# Plotting density
+
+```{r}
+# Pseudotime densities (by treatment)
+ds <- list(FIRE = density(sce$slingPseudotimes[colData(sce)$genotype == "KO"]),
+           WT = density(sce$slingPseudotimes[colData(sce)$genotype == "WT"]),
+           HET = density(sce$slingPseudotimes[colData(sce)$genotype == "HET"]) )
+xlim <- range(c(ds$WT$x, ds$FIRE$x, ds$HET$x))
+ylim <- range(c(ds$WT$y, ds$FIRE$y, ds$HET$y))
+plot(xlim, ylim, col = "white", xlab = "Pseudotime", ylab = "")
+polygon(c(min(ds$WT$x),ds$WT$x,max(ds$WT$x)),
+		c(0,ds$WT$y,0), col = alpha(col_wt_het_ko[1], alpha = .5))
+polygon(c(min(ds$HET$x),ds$HET$x,max(ds$HET$x)),
+		c(0,ds$HET$y,0), col = alpha(col_wt_het_ko[2], alpha = .5))
+polygon(c(min(ds$FIRE$x),ds$FIRE$x,max(ds$FIRE$x)),
+		c(0,ds$FIRE$y,0), col = alpha(col_wt_het_ko[3], alpha = .5))
+legend("topright", legend = c("WT","HET", "FIRE"), 
+       fill = alpha(c(col_wt_het_ko[1], col_wt_het_ko[2],col_wt_het_ko[3]), alpha = .5), bty = "n")
+```
+```{r}
+# separate
+plot(xlim, ylim, col = "white", xlab = "Pseudotime", ylab = "density WT")
+polygon(c(min(ds$WT$x),ds$WT$x,max(ds$WT$x)),
+		c(0,ds$WT$y,0), col = alpha(col_wt_het_ko[1], alpha = .5))
+#legend("topright", legend = c("WT","HET", "FIRE"), 
+#       fill = alpha(c(col_wt_het_ko[1], col_wt_het_ko[2],col_wt_het_ko[3]), alpha = .5), bty = "n")
+
+
+plot(xlim, ylim, col = "white", xlab = "Pseudotime", ylab = "density HET")
+polygon(c(min(ds$HET$x),ds$HET$x,max(ds$HET$x)),
+		c(0,ds$HET$y,0), col = alpha(col_wt_het_ko[2], alpha = .5))
+
+plot(xlim, ylim, col = "white", xlab = "Pseudotime", ylab = "density FIRE")
+polygon(c(min(ds$FIRE$x),ds$FIRE$x,max(ds$FIRE$x)),
+		c(0,ds$FIRE$y,0), col = alpha(col_wt_het_ko[3], alpha = .5))
+```
+```{r}
+# test for significance Kolmogorov-Smirnov Test (https://kstreet13.github.io/bioc2020trajectories/articles/workshopTrajectories.html)
+ks.test(sce$slingPseudotimes[colData(sce)$genotype == "WT"]*100,
+        sce$slingPseudotimes[colData(sce)$genotype == "KO"]*100)
+
+ks.test(sce$slingPseudotimes[colData(sce)$genotype == "WT"],
+        sce$slingPseudotimes[colData(sce)$genotype == "HET"])
+
+
+```
+More information about KS test:
+<details>
+https://en.wikipedia.org/wiki/Kolmogorov%E2%80%93Smirnov_test
+https://stats.stackexchange.com/questions/333892/is-the-kolmogorov-smirnov-test-too-strict-if-the-sample-size-is-large
+https://stats.stackexchange.com/questions/7771/how-do-i-calculate-the-effect-size-for-the-kolmogorov-smirnov-z-statistic
+
+In this test, the statistic (D) indeed also reflects the effect size. The interpretation is that D is the maximum distance between the two cumulative distributions from our data. A big number, reflects a big distance, big effect; small number small effect. The maximum value is 1. 
+```{r}
+plot(ecdf(sce$slingPseudotimes[colData(sce)$genotype == "WT"]))
+lines(ecdf(sce$slingPseudotimes[colData(sce)$genotype == "KO"]), col="red")
+
+```
+
+This is how the cumulative distributions look for the FIRE (red) and WT (black). The  maximum distance is arround pseudotime (x) 1.5.
+
+"there is a difference, but not sure it is biologically relevant. My first impression as well as yours was "these curves look similar". The test will be significant with the tiniest of differences as the sample number is so big, as you well pointed and is also mentioned in the link I forwarded about picking noise.
+So, it is up to our human expertise to decide if the effect size is biologically relevant or not. Then, why not going back to our first human impression which was "these curves look similar"? "
+For other possible interpretations go back to email thread.
+
+</details>
+
+# Separate WT and KO
+
+## WT
+
+```{r subset-preprocess, eval=F}
+## this would be interesting, but actually it's better to keep the same graph, so we can compare more easily. 
+sce_WT <- sce[, sce$genotype == "WT"]
+# remove the previous slingshot run
+previous <- grep("slingPseudotime", colnames(colData(sce_WT)), value=T)
+for(meta in previous){
+  colData(sce_WT)[[meta]] <- NULL
+}
+keep_feature <- rowSums(counts(sce_WT) > 0) > 10
+sce_WT <- sce_WT[keep_feature,]
+gene_var_df <- modelGeneVar(sce_WT, density.weights = FALSE) # density weights avoids overfitting due to high-abundance genes being HV
+gene_var <- metadata(gene_var_df)
+plot(gene_var$mean, gene_var$var, xlab= "Mean of log-expression", ylab= "Variance of log-expression")
+curve(gene_var$trend(x), lwd=2, add=T, col = "red")
+# select hvgs
+hvgs <- getTopHVGs(gene_var_df, n=2000)
+# save them in the object
+rowSubset(sce_WT) <- hvgs
+
+
+#recompute the corrected graph 
+
+set.seed(100)
+sce <- correctExperiments(sce,
+  batch = factor(sce$chip),
+  subset.row = rowSubset(sce),
+  correct.all=TRUE,
+  PARAM = FastMnnParam(
+  merge.order = 
+    list(list("3","5"), list("4","6")),
+  d = 23,
+  prop.k=0.10
+  )
+)
+# compute dimensional reduction 
+set.seed(100)
+sce <- runTSNE(sce,  dimred="corrected")
+
+set.seed(100)
+sce <- runUMAP(sce, dimred="corrected")
+
+plotReducedDim(sce, "UMAP", colour_by = "chip")
+plotReducedDim(sce, "UMAP", colour_by = "clusters_named")
+# https://github.com/kstreet13/slingshot/issues/87
+reducedDim(sce, "corrected-1") <- reducedDim(sce, "corrected")[,1:22]
+```
+
+```{r subset-wt, eval=T}
+sce_WT <- sce[, sce$genotype == "WT"]
+# remove the previous slingshot run
+previous <- grep("slingPseudotime", colnames(colData(sce_WT)), value=T)
+for(meta in previous){
+  colData(sce_WT)[[meta]] <- NULL
+}
+```
+
+
+```{r}
+# run slingshot
+sce_WT <- slingshot(sce_WT, clusterLabels = "clusters_named", reducedDim= "corrected-1", start.clus="OPC")
+summary(sce_WT$slingPseudotime_1)
+
+```
+
+
+```{r}
+# as there are 3 trajectory lineages a mean between them can be calucluated
+sce_WT$slingPseudotimes <- rowMeans(cbind(sce_WT$slingPseudotime_1, sce_WT$slingPseudotime_2, sce_WT$slingPseudotime_3), na.rm = TRUE)
+
+plotReducedDim(sce_WT, "UMAP", colour_by = "slingPseudotimes") 
+
+# plot the lineages
+cols <- pals::viridis(100)[cut(sce_WT$slingPseudotimes, breaks = 100)]
+plot(reducedDims(sce_WT)$corrected, col = cols)
+lines(SlingshotDataSet(sce_WT), lwd=2, col='black', type = "lineages")
+
+# plot the smooth lines
+cols <- pals::viridis(100)[cut(sce_WT$slingPseudotimes, breaks = 100)]
+plot(reducedDims(sce_WT)$corrected, col = cols)
+lines(SlingshotDataSet(sce_WT), lwd=2, col='black')
+# map back to what they correspond
+plotReducedDim(sce_WT, "corrected", colour_by= "clusters_named") + ylab ("PCA 2") + xlab("PCA 1")
+
+# lineages
+slingLineages(SlingshotDataSet(sce_WT))
+```
+
+## KO
+```{r subset-ko, eval=T}
+sce_KO <- sce[, sce$genotype == "KO"]
+# remove the previous slingshot run
+previous <- grep("slingPseudotime", colnames(colData(sce_KO)), value=T)
+for(meta in previous){
+  colData(sce_KO)[[meta]] <- NULL
+}
+```
+
+
+```{r}
+# run slingshot
+sce_KO <- slingshot(sce_KO, clusterLabels = "clusters_named", reducedDim= "corrected-1", start.clus="OPC")
+summary(sce_KO$slingPseudotime_1)
+
+```
+
+
+```{r}
+# as there are 2 trajectory lineages a mean between them can be calucluated
+sce_KO$slingPseudotimes <- rowMeans(cbind(sce_KO$slingPseudotime_1, sce_KO$slingPseudotime_2), na.rm = TRUE)
+
+plotReducedDim(sce_KO, "UMAP", colour_by = "slingPseudotimes") 
+
+# plot the lineages
+cols <- pals::viridis(100)[cut(sce_KO$slingPseudotimes, breaks = 100)]
+plot(reducedDims(sce_KO)$corrected, col = cols, ylab = "PCA 2", xlab = "PCA 1")
+lines(SlingshotDataSet(sce_KO), lwd=2, col='black', type = "lineages")
+
+# plot the smooth lines
+cols <- pals::viridis(100)[cut(sce_KO$slingPseudotimes, breaks = 100)]
+plot(reducedDims(sce_KO)$corrected, col = cols, ylab = "PCA 2", xlab = "PCA 1")
+lines(SlingshotDataSet(sce_KO), lwd=2, col='black')
+# map back to what they correspond
+plotReducedDim(sce_KO, "corrected", colour_by= "clusters_named") + ylab ("PCA 2") + xlab("PCA 1")
+
+# lineages
+slingLineages(SlingshotDataSet(sce_KO)) 
+```
+
+<details>
+
+<summary> Click to expand </summary>
+
+```{r session-info}
+sessionInfo()
+```
+
+</details>
