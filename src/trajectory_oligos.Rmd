@@ -389,13 +389,12 @@ for(meta in previous){
 # run slingshot
 sce_WT <- slingshot(sce_WT, clusterLabels = "clusters_named", reducedDim= "corrected-1", start.clus="OPC")
 summary(sce_WT$slingPseudotime_1)
-
+# as there are 3 trajectory lineages a mean between them can be calucluated
+sce_WT$slingPseudotimes <- rowMeans(cbind(sce_WT$slingPseudotime_1, sce_WT$slingPseudotime_2, sce_WT$slingPseudotime_3), na.rm = TRUE)
 ```
 
 
 ```{r}
-# as there are 3 trajectory lineages a mean between them can be calucluated
-sce_WT$slingPseudotimes <- rowMeans(cbind(sce_WT$slingPseudotime_1, sce_WT$slingPseudotime_2, sce_WT$slingPseudotime_3), na.rm = TRUE)
 
 plotReducedDim(sce_WT, "UMAP", colour_by = "slingPseudotimes") 
 
@@ -408,12 +407,34 @@ lines(SlingshotDataSet(sce_WT), lwd=2, col='black', type = "lineages")
 cols <- pals::viridis(100)[cut(sce_WT$slingPseudotimes, breaks = 100)]
 plot(reducedDims(sce_WT)$corrected, col = cols)
 lines(SlingshotDataSet(sce_WT), lwd=2, col='black')
-# map back to what they correspond
-plotReducedDim(sce_WT, "corrected", colour_by= "clusters_named") + ylab ("PCA 2") + xlab("PCA 1")
 
 # lineages
 slingLineages(SlingshotDataSet(sce_WT))
 ```
+
+
+```{r WT-clusters}
+# map back to what they correspond
+plotReducedDim(sce_WT, "corrected", colour_by= "clusters_named") + ylab ("PCA 2") + xlab("PCA 1") +  guides(color=guide_legend(title="Cluster"))
+```
+
+```{r WT-pseudotime}
+# plot the corrected dimension with pseudotime colour
+gg <- plotReducedDim(sce_WT, dimred = "corrected", colour_by="slingPseudotimes") +
+   ylab ("PCA 2") + xlab("PCA 1") + guides(colour= guide_colorbar(guide_legend("Pseudotime")))
+# extract lines
+embedded <- SlingshotDataSet(sce_WT)
+embedded <- slingCurves(embedded)
+# remove the first curve - it is confusing to see these two trajectories that are so close to each other in the representation
+embedded <- embedded[2:3]
+for (path in embedded) {
+    embedded_l <- data.frame(path$s[path$ord,])
+    gg <- gg + geom_path(data=embedded_l, aes(x=Dim.1, y=Dim.2), size=1.2)
+}
+
+gg
+```
+
 
 ## KO
 ```{r subset-ko, eval=T}
@@ -430,14 +451,12 @@ for(meta in previous){
 # run slingshot
 sce_KO <- slingshot(sce_KO, clusterLabels = "clusters_named", reducedDim= "corrected-1", start.clus="OPC")
 summary(sce_KO$slingPseudotime_1)
-
+# as there are 2 trajectory lineages a mean between them can be calucluated
+sce_KO$slingPseudotimes <- rowMeans(cbind(sce_KO$slingPseudotime_1, sce_KO$slingPseudotime_2), na.rm = TRUE)
 ```
 
 
 ```{r}
-# as there are 2 trajectory lineages a mean between them can be calucluated
-sce_KO$slingPseudotimes <- rowMeans(cbind(sce_KO$slingPseudotime_1, sce_KO$slingPseudotime_2), na.rm = TRUE)
-
 plotReducedDim(sce_KO, "UMAP", colour_by = "slingPseudotimes") 
 
 # plot the lineages
@@ -449,13 +468,31 @@ lines(SlingshotDataSet(sce_KO), lwd=2, col='black', type = "lineages")
 cols <- pals::viridis(100)[cut(sce_KO$slingPseudotimes, breaks = 100)]
 plot(reducedDims(sce_KO)$corrected, col = cols, ylab = "PCA 2", xlab = "PCA 1")
 lines(SlingshotDataSet(sce_KO), lwd=2, col='black')
-# map back to what they correspond
-plotReducedDim(sce_KO, "corrected", colour_by= "clusters_named") + ylab ("PCA 2") + xlab("PCA 1")
+
 
 # lineages
 slingLineages(SlingshotDataSet(sce_KO)) 
 ```
 
+```{r KO-clusters}
+# map back to what they correspond
+plotReducedDim(sce_KO, "corrected", colour_by= "clusters_named") + ylab ("PCA 2") + xlab("PCA 1") +  guides(color=guide_legend(title="Cluster"))
+```
+
+```{r WT-pseudotime}
+# plot the corrected dimension with pseudotime colour
+gg <- plotReducedDim(sce_KO, dimred = "corrected", colour_by="slingPseudotimes") +
+   ylab ("PCA 2") + xlab("PCA 1") + guides(colour= guide_colorbar(guide_legend("Pseudotime")))
+# extract lines
+embedded <- SlingshotDataSet(sce_KO)
+embedded <- slingCurves(embedded)
+for (path in embedded) {
+    embedded_l <- data.frame(path$s[path$ord,])
+    gg <- gg + geom_path(data=embedded_l, aes(x=Dim.1, y=Dim.2), size=1.2)
+}
+
+gg
+```
 <details>
 
 <summary> Click to expand </summary>
