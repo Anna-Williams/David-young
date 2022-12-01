@@ -19,6 +19,7 @@ library(batchelor) # correct batch effect
 library(scater) # dimred calculation
 library(bluster) # clustering
 library(slingshot) # trajectory
+library(ggridges) # density plots
 ```
 
 ```{r}
@@ -324,6 +325,14 @@ For other possible interpretations go back to email thread.
 
 </details>
 
+```{r}
+df <- data.frame(Pseudotime=sce$slingPseudotimes, Genotype=sce$genotype)
+ggplot(df,  aes(x=Pseudotime, y = Genotype, fill=Genotype )) + geom_density_ridges(alpha=.7) + scale_fill_manual(values = col_wt_het_ko)
+ggplot(df,  aes(x=Pseudotime, y = Genotype, fill=stat(x))) + geom_density_ridges_gradient(alpha=.7) + scale_fill_viridis_c(name="Pseudotime")
+ 
+```
+
+
 # Separate WT and KO
 
 ## WT
@@ -479,7 +488,7 @@ slingLineages(SlingshotDataSet(sce_KO))
 plotReducedDim(sce_KO, "corrected", colour_by= "clusters_named") + ylab ("PCA 2") + xlab("PCA 1") +  guides(color=guide_legend(title="Cluster"))
 ```
 
-```{r WT-pseudotime}
+```{r KO-pseudotime}
 # plot the corrected dimension with pseudotime colour
 gg <- plotReducedDim(sce_KO, dimred = "corrected", colour_by="slingPseudotimes") +
    ylab ("PCA 2") + xlab("PCA 1") + guides(colour= guide_colorbar(guide_legend("Pseudotime")))
