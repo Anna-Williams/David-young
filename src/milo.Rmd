@@ -279,8 +279,9 @@ To visualize DA results relating them to the embedding of single cells, we can b
 ```{r nhoodGraph-het, fig.width=15, fig.height=8, fig.path=fig_path}
 milo_het <- buildNhoodGraph(milo_het)
 ## Plot single-cell UMAP
-tsne_pl <- plotReducedDim(milo_het, dimred = "TSNE", colour_by="genotype", text_by = "celltype", 
-                          text_size = 3, point_size=0.5) + scale_color_manual(values = c(col_wt_het_ko[1],col_wt_het_ko[2])) + labs(color="genotype") +
+tsne_pl <- plotReducedDim(milo_het, dimred = "TSNE", colour_by="genotype",
+                       #   text_by = "celltype", text_size = 3, point_size=0.5) + 
+  scale_color_manual(values = c(col_wt_het_ko[1],col_wt_het_ko[2])) + labs(color="genotype") +
   guides(fill="none")
 ## Plot neighbourhood graph
 nh_graph_pl <- plotNhoodGraphDA(milo_het, da_results_het, layout="TSNE",alpha=0.1) +  scale_fill_gradient2(high = scales::muted("red"), mid = "white", low = scales::muted("blue")) + labs(fill = "logFC")
