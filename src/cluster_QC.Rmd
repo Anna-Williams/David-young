@@ -13,6 +13,7 @@ editor_options:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+.libPaths("C:/Program Files/R/R-4.1.1/library")
 ```
 
 #### set-up
@@ -112,6 +113,8 @@ High mithocondrial genes is associated with stressed, lower quality, cells.
 
 ```{r}
 plotTSNE(sce, colour_by = "subsets_mt_percent", text_by = "cluster_names") + 
+  ggtitle("Percentatge mithocondrial genes")
+plotTSNE(sce, colour_by = "subsets_mt_percent") + 
   ggtitle("Percentatge mithocondrial genes")
 ```
 
@@ -249,19 +252,17 @@ annotation. <https://doi.org/10.1101/2021.04.11.439393>
 
 <details>
 
-<summary>
-
-Note on astrocyte-OPCs:
-
-</summary>
+<summary>Note on astrocyte-OPCs:</summary>
 
 We also tested keeping them and rerunning doublet finder,
 
-                          source1       source2 num.de median.de          best     p.value lib.size1 lib.size2        prop
-    OPC-Astrocyte           OPC_1   Astrocyte_2    149    3603.0         Gnao1    7.180342e-83   0.6135593 0.4465331 0.005588435            
-    Oligo-Astrocyte       Oligo_1   Astrocyte_1    254    3264.0       mt-Atp6    3.848991e-35   0.8738298 0.4604424 0.013932279
-    OEG             ChP_epithelia   Astrocyte_2    623    2344.0           Npy    1.935603e-29   1.5961975 0.8223610 0.001940429
-    [...]
+```         
+                      source1       source2 num.de median.de          best     p.value lib.size1 lib.size2        prop
+OPC-Astrocyte           OPC_1   Astrocyte_2    149    3603.0         Gnao1    7.180342e-83   0.6135593 0.4465331 0.005588435            
+Oligo-Astrocyte       Oligo_1   Astrocyte_1    254    3264.0       mt-Atp6    3.848991e-35   0.8738298 0.4604424 0.013932279
+OEG             ChP_epithelia   Astrocyte_2    623    2344.0           Npy    1.935603e-29   1.5961975 0.8223610 0.001940429
+[...]
+```
 
 Code in commit 0b2c63cd from the github repo, in annotation_02.rmd
 
@@ -378,6 +379,8 @@ plotTSNE(sce, colour_by = "filter_out", point_size=0.5,
          point_alpha = 0.3, text_by = "cluster_names", text_size = 3) 
 plotTSNE(sce, colour_by = "filter_out", point_size=0.5,
          point_alpha = 0.3, text_by = "celltype", text_size = 3) 
+plotTSNE(sce, colour_by = "filter_out", point_size=0.5,
+         point_alpha = 0.3) 
 if (!file.exists(here("processed", project, "sce_clusterQC.RDS"))){
  sce <- sce[, sce$filter_out == FALSE]
  saveRDS(sce, here("processed", project, "sce_clusterQC.RDS"))
@@ -393,11 +396,7 @@ This would filter `r filter_out` cells filtered out, leaving an object with
 
 <details>
 
-<summary>
-
-Click to expand
-
-</summary>
+<summary>Click to expand</summary>
 
 ```{r session-info}
 sessionInfo()
